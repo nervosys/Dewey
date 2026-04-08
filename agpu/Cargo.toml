@@ -1,0 +1,24 @@
+[package]
+name = "agpu"
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["NERVOSYS <admin@nervosys.ai>"]
+license = "AGPL-3.0-or-later"
+description = "Standalone agentic-first GPU rendering backend — wgpu replacement with Vulkan, OpenGL, and complete ontology"
+repository = "https://github.com/nervosys/Dewey"
+homepage = "https://github.com/nervosys/Dewey/tree/master/agpu"
+documentation = "https://docs.rs/agpu"
+readme = "README.md"
+keywords = ["gpu", "wgpu", "rendering", "agent", "ontology", "opengl", "vulkan"]
+categories = ["rendering", "graphics", "gui"]
+
+[dependencies]
+wgpu = "24"
+winit = "0.30"
+bytemuck = { version = "1", features = ["derive"] }
+glyphon = "0.8"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+pollster = "0.4"

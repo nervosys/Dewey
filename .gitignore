@@ -1,0 +1,19 @@
+# Build artifacts
+**/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI session transcripts
+CHAT-SUMMARY.md
+
+# Cargo lock is committed for binaries, optional for libraries
+# Cargo.lock

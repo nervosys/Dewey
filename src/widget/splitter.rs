@@ -1,0 +1,233 @@
+//! Splitter widget — a resizable split pane.
+
+use crate::core::style::TextStyle;
+use crate::core::{Color, Position, Rect};
+use crate::ontology::*;
+use crate::runtime::Frame;
+use crate::widget::StatefulWidget;
+
+/// The direction of the split.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitDirection {
+    Horizontal,
+    Vertical,
+}
+
+/// Persistent state for a splitter.
+pub struct SplitterState {
+    /// The split ratio (0.0 to 1.0). 0.5 means equal halves.
+    pub ratio: f32,
+}
+
+impl SplitterState {
+    pub fn new(ratio: f32) -> Self {
+        Self {
+            ratio: ratio.clamp(0.0, 1.0),
+        }
+    }
+}
+
+/// A resizable split pane that divides an area into two regions.
+///
+/// The agent can read or set the split ratio programmatically.
+pub struct Splitter {
+    direction: SplitDirection,
+    min_ratio: f32,
+    max_ratio: f32,
+    agent_id: String,
+}
+
+impl Splitter {
+    pub fn new(direction: SplitDirection) -> Self {
+        Self {
+            direction,
+            min_ratio: 0.1,
+            max_ratio: 0.9,
+            agent_id: String::new(),
+        }
+    }
+
+    pub fn horizontal() -> Self {
+        Self::new(SplitDirection::Horizontal)
+    }
+
+    pub fn vertical() -> Self {
+        Self::new(SplitDirection::Vertical)
+    }
+
+    pub fn min_ratio(mut self, min: f32) -> Self {
+        self.min_ratio = min.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn max_ratio(mut self, max: f32) -> Self {
+        self.max_ratio = max.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn agent_id(mut self, id: impl Into<String>) -> Self {
+        self.agent_id = id.into();
+        self
+    }
+
+    /// Compute the two child rectangles from the parent area and current ratio.
+    pub fn compute_rects(area: Rect, direction: SplitDirection, ratio: f32) -> (Rect, Rect) {
+        match direction {
+            SplitDirection::Horizontal => {
+                let left_w = area.width * ratio;
+                let left = Rect::new(area.x, area.y, left_w, area.height);
+                let right = Rect::new(area.x + left_w, area.y, area.width - left_w, area.height);
+                (left, right)
+            }
+            SplitDirection::Vertical => {
+                let top_h = area.height * ratio;
+                let top = Rect::new(area.x, area.y, area.width, top_h);
+                let bottom = Rect::new(area.x, area.y + top_h, area.width, area.height - top_h);
+                (top, bottom)
+            }
+        }
+    }
+}
+
+impl Discoverable for Splitter {
+    fn schema(&self) -> WidgetSchema {
+        let mut schema = WidgetSchema::new(
+            "Splitter",
+            "A resizable split pane",
+            SemanticRole::Container,
+        );
+        schema.usage_hint = Some("Splitter::new(SplitDirection::Horizontal)".into());
+        schema.tags = vec![
+            "splitter".into(),
+            "split".into(),
+            "resize".into(),
+            "pane".into(),
+        ];
+        schema
+    }
+
+    fn capabilities(&self) -> Vec<AgentCapability> {
+        vec![
+            AgentCapability::Resizable {
+                min_width: None,
+                min_height: None,
+                max_width: None,
+                max_height: None,
+            },
+            AgentCapability::RangeEditable {
+                min: self.min_ratio as f64,
+                max: self.max_ratio as f64,
+                step: Some(0.01),
+            },
+        ]
+    }
+
+    fn actions(&self) -> Vec<AgentAction> {
+        vec![AgentAction::with_params(
+            "set_ratio",
+            "Set the split ratio (0.0 = fully collapsed left/top, 1.0 = fully expanded)",
+            vec![ActionParam::required(
+                "ratio",
+                "Split ratio (0.0 to 1.0)",
+                ActionParamType::Float,
+            )],
+            true,
+        )]
+    }
+
+    fn semantic_role(&self) -> SemanticRole {
+        SemanticRole::Container
+    }
+
+    fn agent_state(&self) -> serde_json::Value {
+        serde_json::json!({
+            "direction": match self.direction {
+                SplitDirection::Horizontal => "horizontal",
+                SplitDirection::Vertical => "vertical",
+            },
+            "min_ratio": self.min_ratio,
+            "max_ratio": self.max_ratio,
+        })
+    }
+
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        Err("Use StatefulWidget for state mutations".to_string())
+    }
+
+    fn agent_id(&self) -> Option<&str> {
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
+    }
+}
+
+impl StatefulWidget for Splitter {
+    type State = SplitterState;
+
+    fn render(self, area: Rect, frame: &mut Frame<'_>, state: &mut SplitterState) {
+        state.ratio = state.ratio.clamp(self.min_ratio, self.max_ratio);
+
+        if !self.agent_id.is_empty() {
+            let node = UiNode::new("Splitter", SemanticRole::Container)
+                .with_id(&self.agent_id)
+                .with_bounds(area.into())
+                .with_property("ratio", serde_json::json!(state.ratio))
+                .with_property(
+                    "direction",
+                    serde_json::json!(match self.direction {
+                        SplitDirection::Horizontal => "horizontal",
+                        SplitDirection::Vertical => "vertical",
+                    }),
+                );
+            frame.register_widget(node);
+            frame.register_hitbox(&self.agent_id, area, 1);
+        }
+
+        let (first, second) = Self::compute_rects(area, self.direction, state.ratio);
+
+        // First panel
+        frame.painter().fill_rect(first, Color::DARK_GRAY, 0.0);
+        let ts = TextStyle {
+            font_size: 14.0,
+            color: Color::WHITE,
+            ..Default::default()
+        };
+        frame
+            .painter()
+            .text(Position::new(first.x + 4.0, first.y + 4.0), "Panel A", &ts);
+
+        // Divider
+        match self.direction {
+            SplitDirection::Horizontal => {
+                frame.painter().line(
+                    Position::new(second.x, area.y),
+                    Position::new(second.x, area.y + area.height),
+                    Color::GRAY,
+                    2.0,
+                );
+            }
+            SplitDirection::Vertical => {
+                frame.painter().line(
+                    Position::new(area.x, second.y),
+                    Position::new(area.x + area.width, second.y),
+                    Color::GRAY,
+                    2.0,
+                );
+            }
+        }
+
+        // Second panel
+        frame.painter().fill_rect(second, Color::DARK_GRAY, 0.0);
+        frame.painter().text(
+            Position::new(second.x + 4.0, second.y + 4.0),
+            "Panel B",
+            &ts,
+        );
+    }
+}

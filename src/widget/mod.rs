@@ -1,0 +1,91 @@
+//! Widget system for Dewey.
+//!
+//! Widgets are the building blocks of a Dewey GUI. Each widget implements
+//! the [`Widget`] trait and renders itself through the Painter abstraction.
+//! Stateful widgets additionally track mutable per-instance state.
+
+pub mod button;
+pub mod canvas;
+pub mod chart;
+pub mod checkbox;
+pub mod color_picker;
+pub mod command_palette;
+pub mod container;
+pub mod date_picker;
+pub mod image;
+pub mod input;
+pub mod label;
+pub mod list;
+pub mod menu;
+pub mod modal;
+pub mod panel;
+pub mod progress;
+pub mod radio;
+pub mod rich_text;
+pub mod scroll;
+pub mod select;
+pub mod slider;
+pub mod splitter;
+pub mod table;
+pub mod tabs;
+pub mod text_area;
+pub mod toolbar;
+pub mod tooltip;
+pub mod tree;
+pub mod virtual_list;
+
+pub use button::Button;
+pub use canvas::{Canvas, DrawCommand};
+pub use chart::{Chart, ChartKind, Series};
+pub use checkbox::Checkbox;
+pub use color_picker::{ColorPicker, ColorPickerState};
+pub use command_palette::{CommandPalette, CommandPaletteState, PaletteCommand};
+pub use container::Container;
+pub use date_picker::{DatePicker, DatePickerState, DateValue};
+pub use image::{Image, ImageFit, ImageSource};
+pub use input::TextInput;
+pub use label::Label;
+pub use list::List;
+pub use menu::{Menu, MenuItem};
+pub use modal::Modal;
+pub use panel::Panel;
+pub use progress::ProgressBar;
+pub use radio::Radio;
+pub use rich_text::{RichText, TextSpan};
+pub use scroll::ScrollArea;
+pub use select::Select;
+pub use slider::Slider;
+pub use splitter::{SplitDirection, Splitter, SplitterState};
+pub use table::{SortDirection, Table, TableState};
+pub use tabs::Tabs;
+pub use text_area::TextArea;
+pub use toolbar::{Toolbar, ToolbarItem};
+pub use tooltip::Tooltip;
+pub use tree::{Tree, TreeNode};
+pub use virtual_list::{VirtualList, VirtualListState};
+
+use crate::core::Rect;
+use crate::ontology::Discoverable;
+
+/// The core widget trait. All widgets must implement this.
+///
+/// Widgets are consumed during rendering (moved into the frame).
+pub trait Widget: Discoverable {
+    /// Render this widget into the given area.
+    ///
+    /// The `frame` provides access to the Painter and hit map registration.
+    fn render(self, area: Rect, frame: &mut crate::runtime::Frame<'_>);
+}
+
+/// A stateful widget that separates persistent state from rendering.
+///
+/// This is the recommended pattern for interactive widgets:
+/// the state lives in a `State` struct that persists across frames,
+/// while the widget itself is rebuilt each frame.
+pub trait StatefulWidget: Discoverable {
+    /// The state type for this widget.
+    type State;
+
+    /// Render this stateful widget.
+    fn render(self, area: Rect, frame: &mut crate::runtime::Frame<'_>, state: &mut Self::State);
+}

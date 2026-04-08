@@ -1,0 +1,17 @@
+[package]
+name = "dewey-derive"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["NERVOSYS <admin@nervosys.ai>"]
+license = "AGPL-3.0-or-later"
+description = "Derive macros for the Dewey GUI framework"
+repository = "https://github.com/nervosys/dewey"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"

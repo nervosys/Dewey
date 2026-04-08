@@ -1,0 +1,358 @@
+//! Command palette widget — a searchable command launcher.
+
+use crate::core::style::TextStyle;
+use crate::core::{Color, Position, Rect};
+use crate::ontology::*;
+use crate::runtime::Frame;
+use crate::widget::StatefulWidget;
+
+/// A command palette entry.
+#[derive(Debug, Clone)]
+pub struct PaletteCommand {
+    /// Unique command identifier.
+    pub id: String,
+    /// Display label.
+    pub label: String,
+    /// Optional keyboard shortcut description.
+    pub shortcut: Option<String>,
+    /// Optional category for grouping.
+    pub category: Option<String>,
+}
+
+impl PaletteCommand {
+    pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            shortcut: None,
+            category: None,
+        }
+    }
+
+    pub fn shortcut(mut self, shortcut: impl Into<String>) -> Self {
+        self.shortcut = Some(shortcut.into());
+        self
+    }
+
+    pub fn category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
+}
+
+/// Persistent state for the command palette.
+pub struct CommandPaletteState {
+    /// Current search query.
+    pub query: String,
+    /// Whether the palette is open.
+    pub open: bool,
+    /// Index of the currently highlighted entry.
+    pub selected_index: usize,
+}
+
+impl CommandPaletteState {
+    pub fn new() -> Self {
+        Self {
+            query: String::new(),
+            open: false,
+            selected_index: 0,
+        }
+    }
+}
+
+impl Default for CommandPaletteState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// A searchable command launcher (Ctrl+Shift+P style).
+///
+/// Agents can list commands, search, and execute them.
+pub struct CommandPalette {
+    commands: Vec<PaletteCommand>,
+    placeholder: String,
+    agent_id: String,
+}
+
+impl CommandPalette {
+    pub fn new(commands: Vec<PaletteCommand>) -> Self {
+        Self {
+            commands,
+            placeholder: "Type a command...".into(),
+            agent_id: String::new(),
+        }
+    }
+
+    pub fn placeholder(mut self, ph: impl Into<String>) -> Self {
+        self.placeholder = ph.into();
+        self
+    }
+
+    pub fn agent_id(mut self, id: impl Into<String>) -> Self {
+        self.agent_id = id.into();
+        self
+    }
+
+    /// Filter commands by the current query using case-insensitive substring matching.
+    fn filtered_commands(&self, query: &str) -> Vec<&PaletteCommand> {
+        if query.is_empty() {
+            return self.commands.iter().collect();
+        }
+        let q = query.to_lowercase();
+        self.commands
+            .iter()
+            .filter(|c| {
+                c.label.to_lowercase().contains(&q)
+                    || c.id.to_lowercase().contains(&q)
+                    || c.category
+                        .as_deref()
+                        .map(|cat| cat.to_lowercase().contains(&q))
+                        .unwrap_or(false)
+            })
+            .collect()
+    }
+}
+
+impl Discoverable for CommandPalette {
+    fn schema(&self) -> WidgetSchema {
+        let mut schema = WidgetSchema::new(
+            "CommandPalette",
+            "A searchable command launcher",
+            SemanticRole::Navigation,
+        );
+        schema.usage_hint =
+            Some("CommandPalette::new(commands).placeholder(\"Type a command...\")".into());
+        schema.tags = vec![
+            "command".into(),
+            "palette".into(),
+            "search".into(),
+            "launcher".into(),
+        ];
+        schema
+    }
+
+    fn capabilities(&self) -> Vec<AgentCapability> {
+        vec![
+            AgentCapability::Searchable,
+            AgentCapability::Selectable {
+                multi_select: false,
+                item_count: 0,
+            },
+            AgentCapability::Focusable,
+        ]
+    }
+
+    fn actions(&self) -> Vec<AgentAction> {
+        vec![
+            AgentAction::with_params(
+                "execute",
+                "Execute a command by ID",
+                vec![ActionParam::required(
+                    "command_id",
+                    "ID of the command to execute",
+                    ActionParamType::String,
+                )],
+                false,
+            ),
+            AgentAction::with_params(
+                "search",
+                "Search commands by query",
+                vec![ActionParam::required(
+                    "query",
+                    "Search query",
+                    ActionParamType::String,
+                )],
+                false,
+            ),
+            AgentAction::simple("open", "Open the command palette", true),
+            AgentAction::simple("close", "Close the command palette", true),
+            AgentAction::simple("list", "List all available commands", false),
+        ]
+    }
+
+    fn semantic_role(&self) -> SemanticRole {
+        SemanticRole::Navigation
+    }
+
+    fn agent_state(&self) -> serde_json::Value {
+        let cmds: Vec<_> = self
+            .commands
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "id": c.id,
+                    "label": c.label,
+                    "shortcut": c.shortcut,
+                    "category": c.category,
+                })
+            })
+            .collect();
+        serde_json::json!({ "commands": cmds })
+    }
+
+    fn execute_action(
+        &mut self,
+        action: &str,
+        params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        match action {
+            "execute" => {
+                let cmd_id = params
+                    .get("command_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or("Missing command_id")?;
+                match self.commands.iter().find(|c| c.id == cmd_id) {
+                    Some(cmd) => Ok(serde_json::json!({
+                        "executed": cmd.id,
+                        "label": cmd.label,
+                    })),
+                    None => Err(format!("Unknown command: {cmd_id}")),
+                }
+            }
+            "search" => {
+                let query = params.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                let results: Vec<_> = self
+                    .filtered_commands(query)
+                    .iter()
+                    .map(|c| {
+                        serde_json::json!({
+                            "id": c.id,
+                            "label": c.label,
+                        })
+                    })
+                    .collect();
+                Ok(serde_json::json!({ "results": results }))
+            }
+            "list" => Ok(self.agent_state()),
+            "open" | "close" => Ok(serde_json::json!({ "status": action })),
+            _ => Err(format!("Unknown action: {action}")),
+        }
+    }
+
+    fn agent_id(&self) -> Option<&str> {
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
+    }
+
+    fn accessibility_label(&self) -> Option<String> {
+        if self.placeholder.is_empty() {
+            None
+        } else {
+            Some(self.placeholder.clone())
+        }
+    }
+}
+
+impl StatefulWidget for CommandPalette {
+    type State = CommandPaletteState;
+
+    fn render(self, area: Rect, frame: &mut Frame<'_>, state: &mut CommandPaletteState) {
+        if !state.open {
+            return;
+        }
+
+        let filtered = self.filtered_commands(&state.query);
+        if state.selected_index >= filtered.len() {
+            state.selected_index = 0;
+        }
+
+        if !self.agent_id.is_empty() {
+            let results: Vec<_> = filtered
+                .iter()
+                .map(|c| serde_json::json!({"id": c.id, "label": c.label}))
+                .collect();
+            let node = UiNode::new("CommandPalette", SemanticRole::Navigation)
+                .with_id(&self.agent_id)
+                .with_bounds(area.into())
+                .with_property("query", serde_json::json!(state.query))
+                .with_property("open", serde_json::json!(state.open))
+                .with_property("selected_index", serde_json::json!(state.selected_index))
+                .with_property("filtered_results", serde_json::json!(results));
+            frame.register_widget(node);
+            frame.register_hitbox(&self.agent_id, area, 10);
+        }
+
+        // Palette window dimensions
+        let pw = area.width * 0.7;
+        let ph = area.height * 0.5;
+        let px = area.x + area.width * 0.15;
+        let py = area.y + 40.0;
+        let palette_rect = Rect::new(px, py, pw, ph);
+
+        frame
+            .painter()
+            .fill_rect(palette_rect, Color::DARK_GRAY, 8.0);
+        frame
+            .painter()
+            .stroke_rect(palette_rect, Color::GRAY, 1.0, 8.0);
+
+        // Title
+        let title_ts = TextStyle {
+            font_size: 16.0,
+            color: Color::WHITE,
+            weight: crate::core::style::FontWeight::Bold,
+            ..Default::default()
+        };
+        frame.painter().text(
+            Position::new(px + 8.0, py + 8.0),
+            "Command Palette",
+            &title_ts,
+        );
+
+        // Query
+        let query_ts = TextStyle {
+            font_size: 14.0,
+            color: Color::WHITE,
+            ..Default::default()
+        };
+        let query_display = if state.query.is_empty() {
+            "Type to search..."
+        } else {
+            &state.query
+        };
+        frame
+            .painter()
+            .text(Position::new(px + 8.0, py + 32.0), query_display, &query_ts);
+
+        // Separator
+        frame.painter().line(
+            Position::new(px + 4.0, py + 52.0),
+            Position::new(px + pw - 4.0, py + 52.0),
+            Color::GRAY,
+            1.0,
+        );
+
+        // Filtered items
+        frame
+            .painter()
+            .push_clip(Rect::new(px, py + 56.0, pw, ph - 60.0));
+        let item_ts = TextStyle {
+            font_size: 14.0,
+            color: Color::WHITE,
+            ..Default::default()
+        };
+        for (i, cmd) in filtered.iter().enumerate() {
+            let iy = py + 56.0 + i as f32 * 24.0;
+            if i == state.selected_index {
+                frame.painter().fill_rect(
+                    Rect::new(px + 2.0, iy, pw - 4.0, 22.0),
+                    Color::from_rgba8(60, 60, 120, 255),
+                    4.0,
+                );
+            }
+            let text = if let Some(ref sc) = cmd.shortcut {
+                format!("{} ({})", cmd.label, sc)
+            } else {
+                cmd.label.clone()
+            };
+            frame
+                .painter()
+                .text(Position::new(px + 12.0, iy + 3.0), &text, &item_ts);
+        }
+        frame.painter().pop_clip();
+    }
+}

@@ -1,0 +1,114 @@
+[package]
+name = "dewey"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["NERVOSYS <admin@nervosys.ai>"]
+license = "AGPL-3.0-or-later"
+description = "An agentic-first GUI framework with pluggable rendering backends and complete ontology for AI agent discoverability"
+repository = "https://github.com/nervosys/Dewey"
+homepage = "https://nervosys.ai/dewey"
+documentation = "https://docs.rs/dewey"
+readme = "README.md"
+keywords = ["gui", "egui", "wgpu", "agent", "ontology"]
+categories = ["gui", "rendering", "accessibility"]
+exclude = [
+    "reference/",
+    ".github/",
+    "docs/",
+    "scripts/",
+    "CHAT-SUMMARY.md",
+    "target/",
+]
+
+[features]
+default = ["egui-backend"]
+egui-backend = ["dep:egui", "dep:eframe"]
+agpu-backend = ["dep:agpu", "dep:winit", "dep:pollster"]
+ws-transport = ["dep:tungstenite"]
+accesskit = ["dep:accesskit"]
+derive = ["dep:dewey-derive"]
+
+[[example]]
+name = "hello"
+path = "examples/hello.rs"
+
+[[example]]
+name = "counter"
+path = "examples/counter.rs"
+
+[[example]]
+name = "agent_demo"
+path = "examples/agent_demo.rs"
+
+[[example]]
+name = "showcase"
+path = "examples/showcase.rs"
+
+[[example]]
+name = "canvas_drawing"
+path = "examples/canvas_drawing.rs"
+
+[[example]]
+name = "ontology_explorer"
+path = "examples/ontology_explorer.rs"
+
+[[example]]
+name = "agent_headless"
+path = "examples/agent_headless.rs"
+
+[[example]]
+name = "chat"
+path = "examples/chat.rs"
+
+[[example]]
+name = "counter_agpu"
+path = "examples/counter_agpu.rs"
+required-features = ["agpu-backend"]
+
+[[example]]
+name = "chat_agpu"
+path = "examples/chat_agpu.rs"
+required-features = ["agpu-backend"]
+
+[dependencies]
+# GUI
+egui = { version = "0.31", optional = true }
+eframe = { version = "0.31", optional = true, default-features = false, features = [
+    "default_fonts",
+    "wgpu",
+] }
+
+# GPU backend (agpu)
+agpu = { version = "2.0.0", path = "agpu", optional = true }
+winit = { version = "0.30", optional = true }
+pollster = { version = "0.4", optional = true }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+
+# Utilities
+compact_str = "0.8"
+log = "0.4"
+env_logger = "0.11"
+
+# WebSocket
+tungstenite = { version = "0.24", optional = true }
+
+# Accessibility
+accesskit = { version = "0.24", optional = true }
+
+# Derive macros
+dewey-derive = { version = "1.0.0", path = "dewey-derive", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1"
+
+[[bench]]
+name = "core_benches"
+harness = false

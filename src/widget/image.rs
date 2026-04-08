@@ -1,0 +1,168 @@
+//! Image widget — displays images from URI or raw RGBA pixel data.
+
+use crate::core::style::TextStyle;
+use crate::core::{Color, Position, Rect};
+use crate::ontology::*;
+use crate::runtime::Frame;
+use crate::widget::Widget;
+
+/// An image display widget.
+pub struct Image {
+    source: ImageSource,
+    alt: String,
+    agent_id: String,
+    fit: ImageFit,
+}
+
+/// Image source.
+#[derive(Clone)]
+pub enum ImageSource {
+    /// A URI/path to an image file. egui loads `file://` and embedded `bytes://` URIs.
+    Uri(String),
+    /// Raw RGBA pixels (uploaded as a texture).
+    Rgba {
+        width: u32,
+        height: u32,
+        pixels: Vec<u8>,
+    },
+}
+
+/// How the image is sized within its area.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ImageFit {
+    /// Scale to fill the area, preserving aspect ratio (may crop).
+    Cover,
+    /// Scale to fit within the area, preserving aspect ratio (may letterbox).
+    #[default]
+    Contain,
+    /// Stretch to fill the exact area.
+    Fill,
+    /// Show at original size (no scaling).
+    Original,
+}
+
+impl Image {
+    pub fn from_uri(uri: impl Into<String>) -> Self {
+        Self {
+            source: ImageSource::Uri(uri.into()),
+            alt: String::new(),
+            agent_id: String::new(),
+            fit: ImageFit::default(),
+        }
+    }
+
+    pub fn from_rgba(width: u32, height: u32, pixels: Vec<u8>) -> Self {
+        Self {
+            source: ImageSource::Rgba {
+                width,
+                height,
+                pixels,
+            },
+            alt: String::new(),
+            agent_id: String::new(),
+            fit: ImageFit::default(),
+        }
+    }
+
+    pub fn alt(mut self, alt: impl Into<String>) -> Self {
+        self.alt = alt.into();
+        self
+    }
+
+    pub fn agent_id(mut self, id: impl Into<String>) -> Self {
+        self.agent_id = id.into();
+        self
+    }
+
+    pub fn fit(mut self, fit: ImageFit) -> Self {
+        self.fit = fit;
+        self
+    }
+}
+
+impl Discoverable for Image {
+    fn schema(&self) -> WidgetSchema {
+        WidgetSchema::new("Image", "An image display", SemanticRole::Media)
+    }
+
+    fn capabilities(&self) -> Vec<AgentCapability> {
+        vec![AgentCapability::Zoomable {
+            min_zoom: 0.1,
+            max_zoom: 10.0,
+        }]
+    }
+
+    fn actions(&self) -> Vec<AgentAction> {
+        vec![]
+    }
+
+    fn semantic_role(&self) -> SemanticRole {
+        SemanticRole::Media
+    }
+
+    fn agent_state(&self) -> serde_json::Value {
+        match &self.source {
+            ImageSource::Uri(uri) => {
+                serde_json::json!({ "source": "uri", "uri": uri, "alt": self.alt, "fit": format!("{:?}", self.fit) })
+            }
+            ImageSource::Rgba { width, height, .. } => {
+                serde_json::json!({ "source": "rgba", "width": width, "height": height, "alt": self.alt, "fit": format!("{:?}", self.fit) })
+            }
+        }
+    }
+
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        Err("Image has no actions".to_string())
+    }
+
+    fn agent_id(&self) -> Option<&str> {
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
+    }
+
+    fn accessibility_label(&self) -> Option<String> {
+        if self.alt.is_empty() {
+            None
+        } else {
+            Some(self.alt.clone())
+        }
+    }
+}
+
+impl Widget for Image {
+    fn render(self, area: Rect, frame: &mut Frame<'_>) {
+        if !self.agent_id.is_empty() {
+            let node = UiNode::new("Image", SemanticRole::Media)
+                .with_id(&self.agent_id)
+                .with_bounds(area.into())
+                .with_property("alt", serde_json::json!(self.alt));
+            frame.register_widget(node);
+        }
+
+        // Draw a placeholder frame with the alt text.
+        // Actual image decoding and texture upload is handled by
+        // backend-specific extensions outside the core Painter trait.
+        frame.painter().stroke_rect(area, Color::GRAY, 1.0, 0.0);
+        let label = if self.alt.is_empty() {
+            "[image]"
+        } else {
+            &self.alt
+        };
+        let ts = TextStyle {
+            font_size: 12.0,
+            color: Color::GRAY,
+            ..Default::default()
+        };
+        let sz = frame.painter().measure_text(label, &ts);
+        let tx = area.x + (area.width - sz.width) * 0.5;
+        let ty = area.y + (area.height - sz.height) * 0.5;
+        frame.painter().text(Position::new(tx, ty), label, &ts);
+    }
+}
