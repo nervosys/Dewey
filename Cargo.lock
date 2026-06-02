@@ -703,7 +703,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
-name = "dewey"
+name = "dewey-derive"
+version = "1.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "deweygui"
 version = "1.0.0"
 dependencies = [
  "accesskit",
@@ -722,15 +731,6 @@ dependencies = [
  "tokio",
  "tungstenite",
  "winit",
-]
-
-[[package]]
-name = "dewey-derive"
-version = "1.0.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
