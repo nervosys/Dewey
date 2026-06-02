@@ -388,9 +388,7 @@ impl<M: Model> McpServer<M> {
         let mut stdout = stdout.lock();
         let mut reader = stdin.lock();
 
-        while let Some((raw, oversized)) =
-            super::read_capped_line(&mut reader, MAX_LINE_BYTES)?
-        {
+        while let Some((raw, oversized)) = super::read_capped_line(&mut reader, MAX_LINE_BYTES)? {
             // Reject oversized requests before attempting to parse them. The
             // reader caps buffering at MAX_LINE_BYTES, so an unbounded line can
             // never exhaust memory before this guard fires.
