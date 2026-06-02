@@ -1,17 +1,20 @@
 [package]
-name = "agpu"
+name = "aga"
 version = "2.0.0"
 edition = "2024"
 rust-version = "1.85"
 authors = ["NERVOSYS <admin@nervosys.ai>"]
 license = "AGPL-3.0-or-later"
-description = "Standalone agentic-first GPU rendering backend — wgpu replacement with Vulkan, OpenGL, and complete ontology"
+description = "AgenticGraphicsAcceleration — standalone agentic-first GPU rendering backend; wgpu replacement with Vulkan, OpenGL, and complete ontology"
 repository = "https://github.com/nervosys/Dewey"
 homepage = "https://github.com/nervosys/Dewey/tree/master/agpu"
-documentation = "https://docs.rs/agpu"
+documentation = "https://docs.rs/aga"
 readme = "README.md"
 keywords = ["gpu", "wgpu", "rendering", "agent", "ontology"]
 categories = ["rendering", "graphics", "gui"]
+
+[lib]
+name = "agpu"
 
 [dependencies]
 wgpu = "24"

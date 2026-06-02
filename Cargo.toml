@@ -85,7 +85,7 @@ eframe = { version = "0.31", optional = true, default-features = false, features
 ] }
 
 # GPU backend (agpu)
-agpu = { version = "2.0.0", path = "agpu", optional = true }
+agpu = { package = "aga", version = "2.0.0", path = "agpu", optional = true }
 winit = { version = "0.30", optional = true }
 pollster = { version = "0.4", optional = true }
 
