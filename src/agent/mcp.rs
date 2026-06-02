@@ -22,7 +22,7 @@
 //! ← {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"success\":true}"}]}}
 //! ```
 
-use std::io::{self, BufRead, Write};
+use std::io::{self, Write};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -386,27 +386,27 @@ impl<M: Model> McpServer<M> {
         let stdin = io::stdin();
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
-        let reader = stdin.lock();
+        let mut reader = stdin.lock();
 
-        for line in reader.lines() {
-            let line = line?;
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            // Reject oversized requests before attempting to parse them.
-            if trimmed.len() > MAX_LINE_BYTES {
+        while let Some((raw, oversized)) =
+            super::read_capped_line(&mut reader, MAX_LINE_BYTES)?
+        {
+            // Reject oversized requests before attempting to parse them. The
+            // reader caps buffering at MAX_LINE_BYTES, so an unbounded line can
+            // never exhaust memory before this guard fires.
+            if oversized {
                 let resp = JsonRpcResponse::err(
                     serde_json::Value::Null,
                     INVALID_REQUEST,
-                    format!(
-                        "Request too large ({} bytes, max {})",
-                        trimmed.len(),
-                        MAX_LINE_BYTES
-                    ),
+                    format!("Request too large (max {MAX_LINE_BYTES} bytes)"),
                 );
                 write_response(&mut stdout, &resp)?;
+                continue;
+            }
+
+            let line = String::from_utf8_lossy(&raw);
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
                 continue;
             }
 
