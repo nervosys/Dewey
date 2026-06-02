@@ -36,9 +36,12 @@ impl ComputeDispatch {
     }
 
     pub fn total_invocations(&self, workgroup_size: [u32; 3]) -> u64 {
-        self.workgroups_x as u64 * workgroup_size[0] as u64
-            * self.workgroups_y as u64 * workgroup_size[1] as u64
-            * self.workgroups_z as u64 * workgroup_size[2] as u64
+        self.workgroups_x as u64
+            * workgroup_size[0] as u64
+            * self.workgroups_y as u64
+            * workgroup_size[1] as u64
+            * self.workgroups_z as u64
+            * workgroup_size[2] as u64
     }
 }
 
@@ -82,7 +85,11 @@ pub struct ComputeTask {
 }
 
 impl ComputeTask {
-    pub fn new(id: impl Into<String>, label: impl Into<String>, shader_source: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        label: impl Into<String>,
+        shader_source: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
@@ -256,8 +263,8 @@ mod tests {
 
     #[test]
     fn compute_task_execute_get_bindings() {
-        let mut task = ComputeTask::new("t1", "Test", "")
-            .binding(ComputeBinding::storage("out", 0, 0));
+        let mut task =
+            ComputeTask::new("t1", "Test", "").binding(ComputeBinding::storage("out", 0, 0));
         let result = task.execute_action("get_bindings", &serde_json::json!({}));
         assert!(result.is_ok());
     }

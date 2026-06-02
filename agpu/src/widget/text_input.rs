@@ -14,9 +14,15 @@ pub struct TextInput {
     pub placeholder: String,
     pub cursor: usize,
     pub selection: Option<(usize, usize)>,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl TextInput {
+    #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -24,9 +30,15 @@ impl TextInput {
             placeholder: String::new(),
             cursor: 0,
             selection: None,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
     }
 
+    #[must_use]
     pub fn value(mut self, value: impl Into<String>) -> Self {
         let v = value.into();
         self.cursor = v.len();
@@ -34,6 +46,7 @@ impl TextInput {
         self
     }
 
+    #[must_use]
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
         self.placeholder = placeholder.into();
         self
@@ -55,16 +68,48 @@ impl TextInput {
             self.cursor = prev;
         }
     }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
+    }
 }
 
 impl Widget for TextInput {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        painter.fill_rect(area, Color::rgba(0.15, 0.15, 0.18, 1.0), 3.0);
-        painter.stroke_rect(area, Color::rgba(0.4, 0.4, 0.5, 1.0), 1.0, 3.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.15, 0.15, 0.18, 1.0));
+        let radius = self.corner_radius.unwrap_or(3.0);
+        painter.fill_rect(area, bg, radius);
+        painter.stroke_rect(area, Color::rgba(0.4, 0.4, 0.5, 1.0), 1.0, radius);
 
         let style = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(14.0),
+            color: self.fg_color.unwrap_or(Color::WHITE),
             ..TextStyle::default()
         };
 

@@ -117,14 +117,43 @@ pub use wgpu::TextureView;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum BackendPreference {
     /// Try Vulkan first, then fall back to the platform default.
-    #[default]
     VulkanPreferred,
     /// Try OpenGL/GLES first, then fall back to the platform default.
     OpenGLPreferred,
-    /// Use the platform default (Vulkan on Linux, DX12 on Windows, Metal on macOS).
+    /// Use the platform default (DX12 on Windows, Metal on macOS, Vulkan on Linux).
+    #[default]
     PlatformDefault,
+
     /// Force a specific set of backends.
     Specific(Backends),
+}
+
+impl BackendPreference {
+    /// Convert to the concrete `wgpu::Backends` bitflags.
+    ///
+    /// `PlatformDefault` selects the native API for the current OS:
+    /// DX12 on Windows, Metal on macOS, Vulkan elsewhere.
+    pub fn to_backends(self) -> Backends {
+        match self {
+            Self::VulkanPreferred => Backends::VULKAN,
+            Self::OpenGLPreferred => Backends::GL,
+            Self::PlatformDefault => {
+                #[cfg(target_os = "windows")]
+                {
+                    Backends::DX12
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    Backends::METAL
+                }
+                #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+                {
+                    Backends::VULKAN
+                }
+            }
+            Self::Specific(b) => b,
+        }
+    }
 }
 
 /// Describes how to create a GPU buffer.

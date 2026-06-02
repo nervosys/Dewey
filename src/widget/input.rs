@@ -1,12 +1,12 @@
 //! Text input widget — single-line text entry.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// State for a text input.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextInputState {
     pub text: String,
     pub cursor: usize,
@@ -14,6 +14,7 @@ pub struct TextInputState {
 }
 
 impl TextInputState {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             text: String::new(),
@@ -36,21 +37,54 @@ impl Default for TextInputState {
 }
 
 /// A single-line text input.
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// TextInput::new()
+///     .placeholder("Enter your name…")
+///     .bg(Color::DARK_GRAY)
+///     .rounded(8.0);
+/// ```
 pub struct TextInput {
     placeholder: String,
+    style: Style,
     agent_id: String,
 }
 
 impl TextInput {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             placeholder: String::new(),
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
 
     pub fn placeholder(mut self, text: impl Into<String>) -> Self {
         self.placeholder = text.into();
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
         self
     }
 
@@ -149,36 +183,46 @@ impl StatefulWidget for TextInput {
             frame.register_hitbox(&self.agent_id, area, 1);
         }
 
-        // Border
-        frame.painter().stroke_rect(area, Color::GRAY, 1.0, 2.0);
-        // Text or placeholder
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
+        // Background fill
+        let bg = self
+            .style
+            .background
+            .unwrap_or(Color::rgba(0.12, 0.12, 0.14, 1.0));
+        let border_color = if state.focused {
+            Color::rgba(0.3, 0.5, 0.9, 0.8)
+        } else {
+            Color::rgba(0.3, 0.3, 0.35, 0.6)
         };
+        let radius = self.style.border_radius.unwrap_or(6.0);
+        frame.painter().fill_rect(area, bg, radius);
+        frame.painter().stroke_rect(area, border_color, 1.0, radius);
+
+        // Text or placeholder
+        let ts = self.style.resolved_text();
+        let pad_x = 10.0;
+        let text_y = area.y + (area.height - ts.font_size * 1.3) * 0.5;
         if state.text.is_empty() {
             let mut pts = ts.clone();
-            pts.color = Color::GRAY;
+            pts.color = Color::rgba(0.45, 0.45, 0.5, 1.0);
             frame.painter().text(
-                Position::new(area.x + 4.0, area.y + 4.0),
+                Position::new(area.x + pad_x, text_y),
                 &self.placeholder,
                 &pts,
             );
         } else {
             frame
                 .painter()
-                .text(Position::new(area.x + 4.0, area.y + 4.0), &state.text, &ts);
+                .text(Position::new(area.x + pad_x, text_y), &state.text, &ts);
         }
         // Cursor
         if state.focused {
             let before = &state.text[..state.cursor.min(state.text.len())];
             let cursor_x = frame.painter().measure_text(before, &ts).width;
             frame.painter().line(
-                Position::new(area.x + 4.0 + cursor_x, area.y + 3.0),
-                Position::new(area.x + 4.0 + cursor_x, area.y + area.height - 3.0),
+                Position::new(area.x + pad_x + cursor_x, area.y + 6.0),
+                Position::new(area.x + pad_x + cursor_x, area.y + area.height - 6.0),
                 Color::WHITE,
-                1.0,
+                1.5,
             );
         }
     }

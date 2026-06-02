@@ -1,7 +1,6 @@
 //! Tooltip widget — displays a hover tip that wraps inner content.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -15,16 +14,19 @@ pub struct Tooltip {
     label: String,
     /// The tooltip text shown on hover.
     text: String,
+    style: Style,
     agent_id: String,
 }
 
 impl Tooltip {
     /// Create a new tooltip with text that appears on hover.
     /// `label` is shown inline; `text` appears when the user hovers.
+    #[must_use]
     pub fn new(label: impl Into<String>, text: impl Into<String>) -> Self {
         Self {
             label: label.into(),
             text: text.into(),
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
@@ -34,8 +36,19 @@ impl Tooltip {
         Self {
             label: String::new(),
             text: text.into(),
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -110,11 +123,7 @@ impl Widget for Tooltip {
         } else {
             &self.label
         };
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let ts = self.style.resolved_text();
         frame
             .painter()
             .text(Position::new(area.x, area.y), label, &ts);

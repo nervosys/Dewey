@@ -82,10 +82,9 @@ impl Layout for GridLayout {
         let max_child_w = children.iter().map(|c| c.width).fold(0.0f32, f32::max);
         let max_child_h = children.iter().map(|c| c.height).fold(0.0f32, f32::max);
 
-        let total_w = max_child_w * self.columns as f32
-            + self.gap * (self.columns as f32 - 1.0).max(0.0);
-        let total_h =
-            max_child_h * self.rows as f32 + self.gap * (self.rows as f32 - 1.0).max(0.0);
+        let total_w =
+            max_child_w * self.columns as f32 + self.gap * (self.columns as f32 - 1.0).max(0.0);
+        let total_h = max_child_h * self.rows as f32 + self.gap * (self.rows as f32 - 1.0).max(0.0);
 
         let (w, h) = constraints.clamp(total_w, total_h);
         DesiredSize::new(w, h)
@@ -98,8 +97,7 @@ impl Layout for GridLayout {
 
         let col_w =
             (area.width - self.gap * (self.columns as f32 - 1.0).max(0.0)) / self.columns as f32;
-        let row_h =
-            (area.height - self.gap * (self.rows as f32 - 1.0).max(0.0)) / self.rows as f32;
+        let row_h = (area.height - self.gap * (self.rows as f32 - 1.0).max(0.0)) / self.rows as f32;
 
         // If we have explicit items, use them for span info
         if !self.items.is_empty() {

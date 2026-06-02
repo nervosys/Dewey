@@ -10,6 +10,7 @@ use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// State for a virtual list.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VirtualListState {
     /// Scroll offset in logical pixels.
     pub scroll_offset: f32,
@@ -17,7 +18,17 @@ pub struct VirtualListState {
     pub total_items: usize,
 }
 
+impl Default for VirtualListState {
+    fn default() -> Self {
+        Self {
+            scroll_offset: 0.0,
+            total_items: 0,
+        }
+    }
+}
+
 impl VirtualListState {
+    #[must_use]
     pub fn new(total_items: usize) -> Self {
         Self {
             scroll_offset: 0.0,

@@ -278,6 +278,7 @@ struct DeweyApp<M: Model> {
     ontology: OntologyRegistry,
     options: ProgramOptions,
     running: bool,
+    last_tick: std::time::Instant,
 }
 
 #[cfg(feature = "egui-backend")]
@@ -293,6 +294,7 @@ impl<M: Model> DeweyApp<M> {
             ontology,
             options,
             running: true,
+            last_tick: std::time::Instant::now(),
         };
         app.process_command(init_cmd);
         app
@@ -377,6 +379,17 @@ impl<M: Model + 'static> eframe::App for DeweyApp<M> {
             }
         }
 
+        // Emit tick events at the configured rate
+        if let Some(tick_rate) = self.options.tick_rate {
+            if self.last_tick.elapsed() >= tick_rate {
+                self.last_tick = std::time::Instant::now();
+                if let Some(msg) = self.model.handle_event(crate::event::Event::Tick) {
+                    let cmd = self.model.update(msg);
+                    self.process_command(cmd);
+                }
+            }
+        }
+
         // Render
         self.hit_map.clear();
         let available = ctx.available_rect();
@@ -403,9 +416,9 @@ impl<M: Model + 'static> eframe::App for DeweyApp<M> {
             }
         });
 
-        // Request continuous repaint if we have a tick rate
-        if self.options.tick_rate.is_some() {
-            ctx.request_repaint();
+        // Schedule next repaint at the tick rate to avoid overwhelming the swapchain
+        if let Some(tick_rate) = self.options.tick_rate {
+            ctx.request_repaint_after(tick_rate);
         }
     }
 }

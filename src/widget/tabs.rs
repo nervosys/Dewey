@@ -1,17 +1,18 @@
 //! Tabs widget — a tabbed panel selector.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// Tab state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TabState {
     pub selected: usize,
 }
 
 impl TabState {
+    #[must_use]
     pub fn new() -> Self {
         Self { selected: 0 }
     }
@@ -22,24 +23,36 @@ impl TabState {
     }
 }
 
-impl Default for TabState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// A tab bar.
 pub struct Tabs {
     labels: Vec<String>,
+    style: Style,
     agent_id: String,
 }
 
 impl Tabs {
+    #[must_use]
     pub fn new(labels: Vec<String>) -> Self {
         Self {
             labels,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -50,7 +63,8 @@ impl Tabs {
 
 impl Discoverable for Tabs {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("Tabs", "A tab bar for switching views", SemanticRole::Tab);
+        let mut schema =
+            WidgetSchema::new("Tabs", "A tab bar for switching views", SemanticRole::Tab);
         schema.usage_hint = Some("Tabs::new(vec![\"Home\".into(), \"Settings\".into()])".into());
         schema.tags = vec!["tabs".into(), "navigation".into(), "switch".into()];
         schema
@@ -58,7 +72,10 @@ impl Discoverable for Tabs {
 
     fn capabilities(&self) -> Vec<AgentCapability> {
         vec![
-            AgentCapability::Selectable { multi_select: false, item_count: self.labels.len() },
+            AgentCapability::Selectable {
+                multi_select: false,
+                item_count: self.labels.len(),
+            },
             AgentCapability::Focusable,
         ]
     }
@@ -67,7 +84,11 @@ impl Discoverable for Tabs {
         vec![AgentAction::with_params(
             "select_tab",
             "Select a tab by index",
-            vec![ActionParam::required("index", "Tab index", ActionParamType::Index)],
+            vec![ActionParam::required(
+                "index",
+                "Tab index",
+                ActionParamType::Index,
+            )],
             true,
         )]
     }
@@ -80,12 +101,20 @@ impl Discoverable for Tabs {
         serde_json::json!({ "labels": self.labels })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Use StatefulWidget for state mutations".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -108,15 +137,18 @@ impl StatefulWidget for Tabs {
         }
 
         let tab_h = 28.0;
-        let ts = TextStyle { font_size: 14.0, color: Color::WHITE, ..Default::default() };
+        let ts = self.style.resolved_text();
+        let active_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
         let mut x = area.x;
         for (i, label) in self.labels.iter().enumerate() {
             let text_w = frame.painter().measure_text(label, &ts).width + 16.0;
             let tab_rect = Rect::new(x, area.y, text_w, tab_h);
             if state.selected == i {
-                frame.painter().fill_rect(tab_rect, Color::DARK_GRAY, 4.0);
+                frame.painter().fill_rect(tab_rect, active_bg, 4.0);
             }
-            frame.painter().text(Position::new(x + 8.0, area.y + 6.0), label, &ts);
+            frame
+                .painter()
+                .text(Position::new(x + 8.0, area.y + 6.0), label, &ts);
             x += text_w;
         }
         // Bottom border

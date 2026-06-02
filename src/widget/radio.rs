@@ -1,7 +1,6 @@
 //! Radio button widget.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -10,16 +9,29 @@ use crate::widget::Widget;
 pub struct Radio {
     label: String,
     selected: bool,
+    style: Style,
     agent_id: String,
 }
 
 impl Radio {
+    #[must_use]
     pub fn new(label: impl Into<String>, selected: bool) -> Self {
         Self {
             label: label.into(),
             selected,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -37,11 +49,21 @@ impl Discoverable for Radio {
     }
 
     fn capabilities(&self) -> Vec<AgentCapability> {
-        vec![AgentCapability::Selectable { multi_select: false, item_count: 1 }, AgentCapability::Focusable]
+        vec![
+            AgentCapability::Selectable {
+                multi_select: false,
+                item_count: 1,
+            },
+            AgentCapability::Focusable,
+        ]
     }
 
     fn actions(&self) -> Vec<AgentAction> {
-        vec![AgentAction::simple("select", "Select this radio button", true)]
+        vec![AgentAction::simple(
+            "select",
+            "Select this radio button",
+            true,
+        )]
     }
 
     fn semantic_role(&self) -> SemanticRole {
@@ -52,7 +74,11 @@ impl Discoverable for Radio {
         serde_json::json!({ "selected": self.selected, "label": self.label })
     }
 
-    fn execute_action(&mut self, action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         match action {
             "select" => {
                 self.selected = true;
@@ -63,7 +89,11 @@ impl Discoverable for Radio {
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -84,11 +114,15 @@ impl Widget for Radio {
 
         let radius = 8.0;
         let center = Position::new(area.x + radius, area.y + radius + 2.0);
-        frame.painter().stroke_circle(center, radius, Color::WHITE, 1.0);
+        frame
+            .painter()
+            .stroke_circle(center, radius, Color::WHITE, 1.0);
         if self.selected {
-            frame.painter().fill_circle(center, radius - 3.0, Color::WHITE);
+            frame
+                .painter()
+                .fill_circle(center, radius - 3.0, Color::WHITE);
         }
-        let ts = TextStyle { font_size: 14.0, color: Color::WHITE, ..Default::default() };
+        let ts = self.style.resolved_text();
         frame.painter().text(
             Position::new(area.x + radius * 2.0 + 6.0, area.y + 2.0),
             &self.label,

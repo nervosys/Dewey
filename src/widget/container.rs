@@ -7,6 +7,16 @@ use crate::runtime::Frame;
 use crate::widget::Widget;
 
 /// A styled container that holds child content.
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// Container::new()
+///     .bg(Color::DARK_GRAY)
+///     .rounded(12.0)
+///     .border(Color::GRAY, 1.0);
+/// ```
 pub struct Container {
     style: Style,
     title: Option<String>,
@@ -14,6 +24,7 @@ pub struct Container {
 }
 
 impl Container {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             style: Style::default(),
@@ -24,6 +35,27 @@ impl Container {
 
     pub fn style(mut self, style: Style) -> Self {
         self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
+        self
+    }
+
+    pub fn border(mut self, color: Color, width: f32) -> Self {
+        self.style.border_color = Some(color);
+        self.style.border_width = Some(width);
         self
     }
 
@@ -46,7 +78,11 @@ impl Default for Container {
 
 impl Discoverable for Container {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("Container", "A styled layout container", SemanticRole::Container);
+        let mut schema = WidgetSchema::new(
+            "Container",
+            "A styled layout container",
+            SemanticRole::Container,
+        );
         schema.usage_hint = Some("Container::new().title(\"Section\")".into());
         schema.tags = vec!["container".into(), "layout".into(), "group".into()];
         schema
@@ -68,12 +104,20 @@ impl Discoverable for Container {
         serde_json::json!({ "title": self.title })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Container has no actions".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -94,16 +138,25 @@ impl Widget for Container {
         }
 
         let bg = self.style.background.unwrap_or(Color::TRANSPARENT);
-        let border = self.style.border_color.unwrap_or(Color::GRAY);
         let radius = self.style.border_radius.unwrap_or(0.0);
-        let border_w = self.style.border_width.unwrap_or(1.0);
         if bg.a > 0.0 {
             frame.painter().fill_rect(area, bg, radius);
         }
-        frame.painter().stroke_rect(area, border, border_w, radius);
+        // Only draw border if explicitly specified
+        if let (Some(border), Some(border_w)) = (self.style.border_color, self.style.border_width) {
+            if border.a > 0.0 && border_w > 0.0 {
+                frame.painter().stroke_rect(area, border, border_w, radius);
+            }
+        }
         if let Some(title) = &self.title {
-            let ts = TextStyle { font_size: 18.0, color: Color::WHITE, ..Default::default() };
-            frame.painter().text(Position::new(area.x + 4.0, area.y + 4.0), title, &ts);
+            let ts = TextStyle {
+                font_size: 18.0,
+                color: Color::WHITE,
+                ..Default::default()
+            };
+            frame
+                .painter()
+                .text(Position::new(area.x + 4.0, area.y + 4.0), title, &ts);
         }
     }
 }

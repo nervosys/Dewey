@@ -155,10 +155,21 @@ impl Painter for AgpuBridgePainter<'_> {
     }
 
     fn measure_text(&self, text: &str, style: &TextStyle) -> Size {
-        // TextEngine::measure requires &mut self, so fall back to estimation
-        // when we only have &self. This matches agpu's own measure_text.
-        let w = style.font_size * 0.6 * text.len() as f32;
-        Size::new(w, style.font_size * 1.2)
+        // TextEngine::measure requires &mut self, so we estimate here.
+        // Use per-character width classes for proportional fonts.
+        let avg_char_width: f32 = text
+            .chars()
+            .map(|c| match c {
+                'i' | 'l' | '!' | '|' | '.' | ',' | ':' | ';' | '\'' | ' ' => 0.35,
+                'm' | 'w' | 'M' | 'W' => 0.75,
+                'A'..='Z' => 0.65,
+                _ => 0.52,
+            })
+            .sum();
+        let w = style.font_size * avg_char_width;
+        let line_h = style.line_height.unwrap_or(style.font_size * 1.3);
+        let lines = text.lines().count().max(1) as f32;
+        Size::new(w, line_h * lines)
     }
 
     fn push_clip(&mut self, rect: Rect) {
@@ -371,7 +382,7 @@ impl<M: Model + 'static> AgpuProgram<M> {
         Self {
             model,
             options: ProgramOptions::default(),
-            backend: agpu::BackendPreference::VulkanPreferred,
+            backend: agpu::BackendPreference::PlatformDefault,
             msaa_samples: 4,
             plugins: PluginRegistry::new(),
             profiling: false,
@@ -496,12 +507,7 @@ impl<M: Model + 'static> RunningApp<M> {
         let window = Arc::new(event_loop.create_window(attrs)?);
 
         // Create wgpu instance with preferred backend
-        let backends = match backend {
-            agpu::BackendPreference::VulkanPreferred => agpu::Backends::VULKAN,
-            agpu::BackendPreference::OpenGLPreferred => agpu::Backends::GL,
-            agpu::BackendPreference::PlatformDefault => agpu::Backends::PRIMARY,
-            agpu::BackendPreference::Specific(b) => b,
-        };
+        let backends = backend.to_backends();
         let instance = agpu::Instance::new(&agpu::InstanceDescriptor {
             backends,
             ..Default::default()
@@ -515,7 +521,7 @@ impl<M: Model + 'static> RunningApp<M> {
         let format = surface_caps
             .formats
             .iter()
-            .find(|f: &&agpu::TextureFormat| f.is_srgb())
+            .find(|f: &&agpu::TextureFormat| !f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
 
@@ -533,7 +539,7 @@ impl<M: Model + 'static> RunningApp<M> {
             present_mode,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 2,
+            desired_maximum_frame_latency: 3,
         };
         surface.configure(gpu.device(), &surface_config);
 
@@ -713,9 +719,9 @@ impl<M: Model + 'static> RunningApp<M> {
                     resolve_target,
                     ops: agpu::Operations {
                         load: agpu::LoadOp::Clear(agpu::types::Color {
-                            r: 0.08,
-                            g: 0.08,
-                            b: 0.10,
+                            r: 0.12,
+                            g: 0.12,
+                            b: 0.14,
                             a: 1.0,
                         }),
                         store: agpu::StoreOp::Store,
@@ -1395,7 +1401,7 @@ mod tests {
         assert!(!prog.profiling);
         assert!(matches!(
             prog.backend,
-            agpu::BackendPreference::VulkanPreferred
+            agpu::BackendPreference::PlatformDefault
         ));
     }
 

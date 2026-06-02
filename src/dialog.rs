@@ -190,7 +190,13 @@ impl Discoverable for NullDialogBackend {
             SemanticRole::Configuration,
         );
         schema.usage_hint = Some("backend.open_file(&OpenFileDialog::new(\"Open\"))".into());
-        schema.tags = vec!["dialog".into(), "file".into(), "open".into(), "save".into(), "message".into()];
+        schema.tags = vec![
+            "dialog".into(),
+            "file".into(),
+            "open".into(),
+            "save".into(),
+            "message".into(),
+        ];
         schema
     }
 
@@ -204,9 +210,24 @@ impl Discoverable for NullDialogBackend {
                 "open_file",
                 "Show an open-file dialog",
                 vec![
-                    ActionParam::optional("title", "Dialog title", ActionParamType::String, serde_json::json!("Open")),
-                    ActionParam::optional("multiple", "Allow multiple selection", ActionParamType::Boolean, serde_json::json!(false)),
-                    ActionParam::optional("directory", "Allow directory selection", ActionParamType::Boolean, serde_json::json!(false)),
+                    ActionParam::optional(
+                        "title",
+                        "Dialog title",
+                        ActionParamType::String,
+                        serde_json::json!("Open"),
+                    ),
+                    ActionParam::optional(
+                        "multiple",
+                        "Allow multiple selection",
+                        ActionParamType::Boolean,
+                        serde_json::json!(false),
+                    ),
+                    ActionParam::optional(
+                        "directory",
+                        "Allow directory selection",
+                        ActionParamType::Boolean,
+                        serde_json::json!(false),
+                    ),
                 ],
                 false,
             ),
@@ -214,8 +235,18 @@ impl Discoverable for NullDialogBackend {
                 "save_file",
                 "Show a save-file dialog",
                 vec![
-                    ActionParam::optional("title", "Dialog title", ActionParamType::String, serde_json::json!("Save")),
-                    ActionParam::optional("default_name", "Default file name", ActionParamType::String, serde_json::json!("")),
+                    ActionParam::optional(
+                        "title",
+                        "Dialog title",
+                        ActionParamType::String,
+                        serde_json::json!("Save"),
+                    ),
+                    ActionParam::optional(
+                        "default_name",
+                        "Default file name",
+                        ActionParamType::String,
+                        serde_json::json!(""),
+                    ),
                 ],
                 false,
             ),
@@ -225,7 +256,12 @@ impl Discoverable for NullDialogBackend {
                 vec![
                     ActionParam::required("title", "Message box title", ActionParamType::String),
                     ActionParam::required("message", "Message body", ActionParamType::String),
-                    ActionParam::optional("show_cancel", "Show cancel button", ActionParamType::Boolean, serde_json::json!(false)),
+                    ActionParam::optional(
+                        "show_cancel",
+                        "Show cancel button",
+                        ActionParamType::Boolean,
+                        serde_json::json!(false),
+                    ),
                 ],
                 false,
             ),

@@ -1,12 +1,21 @@
 //! Label widget — displays static or dynamic text.
 
-use crate::core::style::TextStyle;
-use crate::core::{Position, Rect, Style};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
 
-/// A text label.
+/// A text label for displaying static or dynamic text.
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// Label::new("Hello, Dewey!")
+///     .fg(Color::hex("#1A73E8"))
+///     .text_size(18.0)
+///     .bold();
+/// ```
 pub struct Label {
     text: String,
     style: Style,
@@ -14,6 +23,7 @@ pub struct Label {
 }
 
 impl Label {
+    #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -22,8 +32,39 @@ impl Label {
         }
     }
 
+    /// Override the full visual style.
     pub fn style(mut self, style: Style) -> Self {
         self.style = style;
+        self
+    }
+
+    /// Set the background color.
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    /// Set the text color.
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    /// Set the corner radius.
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
+        self
+    }
+
+    /// Set the text font size.
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.style = self.style.text_size(size);
+        self
+    }
+
+    /// Set the text weight to bold.
+    pub fn bold(mut self) -> Self {
+        self.style = self.style.bold();
         self
     }
 
@@ -57,12 +98,20 @@ impl Discoverable for Label {
         serde_json::json!({ "text": self.text })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Label has no actions".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -80,11 +129,19 @@ impl Widget for Label {
             frame.register_widget(node);
         }
 
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: self.style.resolved_fg(),
-            ..Default::default()
-        };
-        frame.painter().text(Position::new(area.x, area.y), &self.text, &ts);
+        // Draw background if specified
+        if let Some(bg) = self.style.background {
+            if bg.a > 0.0 {
+                let radius = self.style.border_radius.unwrap_or(0.0);
+                frame.painter().fill_rect(area, bg, radius);
+            }
+        }
+
+        let ts = self.style.resolved_text();
+        let text_size = frame.painter().measure_text(&self.text, &ts);
+        // Vertically center text within the area, with left padding
+        let tx = area.x + 4.0;
+        let ty = area.y + (area.height - text_size.height).max(0.0) * 0.5;
+        frame.painter().text(Position::new(tx, ty), &self.text, &ts);
     }
 }

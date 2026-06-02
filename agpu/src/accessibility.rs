@@ -204,11 +204,10 @@ mod tests {
 
     #[test]
     fn node_find() {
-        let tree = AccessibilityNode::new("root", Role::Window)
-            .child(
-                AccessibilityNode::new("toolbar", Role::Toolbar)
-                    .child(AccessibilityNode::new("btn1", Role::Button)),
-            );
+        let tree = AccessibilityNode::new("root", Role::Window).child(
+            AccessibilityNode::new("toolbar", Role::Toolbar)
+                .child(AccessibilityNode::new("btn1", Role::Button)),
+        );
         assert!(tree.find("btn1").is_some());
         assert!(tree.find("nope").is_none());
     }

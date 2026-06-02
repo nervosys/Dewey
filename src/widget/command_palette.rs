@@ -1,7 +1,6 @@
 //! Command palette widget — a searchable command launcher.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
@@ -20,6 +19,7 @@ pub struct PaletteCommand {
 }
 
 impl PaletteCommand {
+    #[must_use]
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -41,6 +41,7 @@ impl PaletteCommand {
 }
 
 /// Persistent state for the command palette.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandPaletteState {
     /// Current search query.
     pub query: String,
@@ -51,6 +52,7 @@ pub struct CommandPaletteState {
 }
 
 impl CommandPaletteState {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             query: String::new(),
@@ -68,24 +70,53 @@ impl Default for CommandPaletteState {
 
 /// A searchable command launcher (Ctrl+Shift+P style).
 ///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// let commands = vec![
+///     PaletteCommand::new("save", "Save File").shortcut("Ctrl+S"),
+///     PaletteCommand::new("open", "Open File").shortcut("Ctrl+O"),
+/// ];
+/// CommandPalette::new(commands).bg(Color::DARK_GRAY).fg(Color::WHITE);
+/// ```
+///
 /// Agents can list commands, search, and execute them.
 pub struct CommandPalette {
     commands: Vec<PaletteCommand>,
     placeholder: String,
+    style: Style,
     agent_id: String,
 }
 
 impl CommandPalette {
+    #[must_use]
     pub fn new(commands: Vec<PaletteCommand>) -> Self {
         Self {
             commands,
             placeholder: "Type a command...".into(),
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
 
     pub fn placeholder(mut self, ph: impl Into<String>) -> Self {
         self.placeholder = ph.into();
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
         self
     }
 
@@ -283,20 +314,18 @@ impl StatefulWidget for CommandPalette {
         let py = area.y + 40.0;
         let palette_rect = Rect::new(px, py, pw, ph);
 
-        frame
-            .painter()
-            .fill_rect(palette_rect, Color::DARK_GRAY, 8.0);
+        let palette_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
+        frame.painter().fill_rect(palette_rect, palette_bg, 8.0);
         frame
             .painter()
             .stroke_rect(palette_rect, Color::GRAY, 1.0, 8.0);
 
         // Title
-        let title_ts = TextStyle {
-            font_size: 16.0,
-            color: Color::WHITE,
-            weight: crate::core::style::FontWeight::Bold,
-            ..Default::default()
-        };
+        let mut title_ts = self.style.resolved_text();
+        if title_ts.font_size == 14.0 {
+            title_ts.font_size = 16.0;
+        }
+        title_ts.weight = crate::core::style::FontWeight::Bold;
         frame.painter().text(
             Position::new(px + 8.0, py + 8.0),
             "Command Palette",
@@ -304,11 +333,7 @@ impl StatefulWidget for CommandPalette {
         );
 
         // Query
-        let query_ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let query_ts = self.style.resolved_text();
         let query_display = if state.query.is_empty() {
             "Type to search..."
         } else {
@@ -330,11 +355,7 @@ impl StatefulWidget for CommandPalette {
         frame
             .painter()
             .push_clip(Rect::new(px, py + 56.0, pw, ph - 60.0));
-        let item_ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let item_ts = self.style.resolved_text();
         for (i, cmd) in filtered.iter().enumerate() {
             let iy = py + 56.0 + i as f32 * 24.0;
             if i == state.selected_index {

@@ -166,7 +166,13 @@ impl Discoverable for Profiler {
             SemanticRole::Diagnostic,
         );
         schema.usage_hint = Some("profiler.begin_frame(); ... profiler.end_frame();".into());
-        schema.tags = vec!["profiling".into(), "performance".into(), "fps".into(), "timing".into(), "metrics".into()];
+        schema.tags = vec![
+            "profiling".into(),
+            "performance".into(),
+            "fps".into(),
+            "timing".into(),
+            "metrics".into(),
+        ];
         schema
     }
 

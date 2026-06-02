@@ -12,31 +12,76 @@ pub struct TextArea {
     pub id: String,
     pub value: String,
     pub scroll_offset: f32,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl TextArea {
+    #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             value: String::new(),
             scroll_offset: 0.0,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
     }
 
+    #[must_use]
     pub fn value(mut self, value: impl Into<String>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
         self
     }
 }
 
 impl Widget for TextArea {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        painter.fill_rect(area, Color::rgba(0.12, 0.12, 0.15, 1.0), 3.0);
-        painter.stroke_rect(area, Color::rgba(0.4, 0.4, 0.5, 1.0), 1.0, 3.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.12, 0.12, 0.15, 1.0));
+        let radius = self.corner_radius.unwrap_or(3.0);
+        painter.fill_rect(area, bg, radius);
+        painter.stroke_rect(area, Color::rgba(0.4, 0.4, 0.5, 1.0), 1.0, radius);
 
+        let fs = self.font_size.unwrap_or(13.0);
         let style = TextStyle {
-            font_size: 13.0,
-            color: Color::WHITE,
+            font_size: fs,
+            color: self.fg_color.unwrap_or(Color::WHITE),
             ..TextStyle::default()
         };
 

@@ -88,6 +88,11 @@ const INVALID_REQUEST: i32 = -32600;
 const METHOD_NOT_FOUND: i32 = -32601;
 const INVALID_PARAMS: i32 = -32602;
 
+/// Maximum allowed size for a single JSON-RPC request line (1 MB). Mirrors the
+/// guard in [`super::rpc`]; rejecting oversized lines before parsing prevents a
+/// runaway or malicious client from forcing a large `serde_json` allocation.
+const MAX_LINE_BYTES: usize = 1_048_576;
+
 // ── MCP tool definitions ─────────────────────────────────────────────────
 
 fn tool_definitions() -> serde_json::Value {
@@ -387,6 +392,21 @@ impl<M: Model> McpServer<M> {
             let line = line?;
             let trimmed = line.trim();
             if trimmed.is_empty() {
+                continue;
+            }
+
+            // Reject oversized requests before attempting to parse them.
+            if trimmed.len() > MAX_LINE_BYTES {
+                let resp = JsonRpcResponse::err(
+                    serde_json::Value::Null,
+                    INVALID_REQUEST,
+                    format!(
+                        "Request too large ({} bytes, max {})",
+                        trimmed.len(),
+                        MAX_LINE_BYTES
+                    ),
+                );
+                write_response(&mut stdout, &resp)?;
                 continue;
             }
 

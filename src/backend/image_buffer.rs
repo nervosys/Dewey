@@ -86,8 +86,8 @@ impl ImagePainter {
             ((color.g * alpha + self.pixels[idx + 1] as f32 / 255.0 * inv) * 255.0) as u8;
         self.pixels[idx + 2] =
             ((color.b * alpha + self.pixels[idx + 2] as f32 / 255.0 * inv) * 255.0) as u8;
-        self.pixels[idx + 3] = ((alpha + self.pixels[idx + 3] as f32 / 255.0 * inv) * 255.0)
-            .min(255.0) as u8;
+        self.pixels[idx + 3] =
+            ((alpha + self.pixels[idx + 3] as f32 / 255.0 * inv) * 255.0).min(255.0) as u8;
     }
 
     /// Clear the buffer to a solid color.

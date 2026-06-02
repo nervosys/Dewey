@@ -12,15 +12,56 @@ pub struct Modal {
     pub id: String,
     pub title: String,
     pub visible: bool,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Modal {
+    #[must_use]
     pub fn new(id: impl Into<String>, title: impl Into<String>, visible: bool) -> Self {
         Self {
             id: id.into(),
             title: title.into(),
             visible,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
     }
 }
 
@@ -40,13 +81,15 @@ impl Widget for Modal {
         let dialog_y = area.y + (area.height - dialog_h) * 0.5;
         let dialog = Rect::new(dialog_x, dialog_y, dialog_w, dialog_h);
 
-        painter.fill_rect(dialog, Color::rgba(0.18, 0.18, 0.22, 1.0), 6.0);
-        painter.stroke_rect(dialog, Color::rgba(0.35, 0.35, 0.45, 1.0), 1.0, 6.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.18, 0.18, 0.22, 1.0));
+        let radius = self.corner_radius.unwrap_or(6.0);
+        painter.fill_rect(dialog, bg, radius);
+        painter.stroke_rect(dialog, Color::rgba(0.35, 0.35, 0.45, 1.0), 1.0, radius);
 
         // Title
         let style = TextStyle {
-            font_size: 16.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(16.0),
+            color: self.fg_color.unwrap_or(Color::WHITE),
             ..TextStyle::default()
         };
         let text_size = painter.measure_text(&self.title, &style);

@@ -225,11 +225,7 @@ mod tests {
     fn web_painter_basics() {
         let mut p = WebPainter::new("canvas");
         p.fill_rect(Rect::new(0.0, 0.0, 100.0, 50.0), Color::RED, 4.0);
-        p.text(
-            Position::new(10.0, 10.0),
-            "Hello",
-            &TextStyle::default(),
-        );
+        p.text(Position::new(10.0, 10.0), "Hello", &TextStyle::default());
         let cmds = p.take_commands();
         assert_eq!(cmds.len(), 2);
         assert!(p.take_commands().is_empty());

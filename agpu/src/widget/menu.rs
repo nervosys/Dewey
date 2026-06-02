@@ -18,6 +18,7 @@ pub enum MenuItem {
 
 impl MenuItem {
     /// Create a clickable menu item.
+    #[must_use]
     pub fn item(id: impl Into<String>, label: impl Into<String>) -> Self {
         Self::Item {
             id: id.into(),
@@ -26,6 +27,7 @@ impl MenuItem {
     }
 
     /// Create a separator.
+    #[must_use]
     pub fn separator() -> Self {
         Self::Separator
     }
@@ -35,29 +37,72 @@ impl MenuItem {
 pub struct Menu {
     pub id: String,
     pub items: Vec<MenuItem>,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Menu {
+    #[must_use]
     pub fn new(id: impl Into<String>, items: Vec<MenuItem>) -> Self {
         Self {
             id: id.into(),
             items,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
     }
 }
 
 impl Widget for Menu {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        painter.fill_rect(area, Color::rgba(0.16, 0.16, 0.2, 1.0), 4.0);
-        painter.stroke_rect(area, Color::rgba(0.35, 0.35, 0.45, 1.0), 1.0, 4.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.16, 0.16, 0.2, 1.0));
+        let radius = self.corner_radius.unwrap_or(4.0);
+        painter.fill_rect(area, bg, radius);
+        painter.stroke_rect(area, Color::rgba(0.35, 0.35, 0.45, 1.0), 1.0, radius);
 
         let item_height = 28.0;
         let sep_height = 8.0;
         let padding = 12.0;
 
         let style = TextStyle {
-            font_size: 13.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(13.0),
+            color: self.fg_color.unwrap_or(Color::WHITE),
             ..TextStyle::default()
         };
 
@@ -101,7 +146,11 @@ impl Discoverable for Menu {
     }
 
     fn actions(&self) -> Vec<AgentAction> {
-        vec![AgentAction::simple("select_item", "Activate a menu item by id", false)]
+        vec![AgentAction::simple(
+            "select_item",
+            "Activate a menu item by id",
+            false,
+        )]
     }
 
     fn semantic_role(&self) -> SemanticRole {
@@ -130,7 +179,10 @@ impl Discoverable for Menu {
         match action {
             "select_item" => {
                 if let Some(id) = params.get("id").and_then(|v| v.as_str()) {
-                    let found = self.items.iter().any(|item| matches!(item, MenuItem::Item { id: iid, .. } if iid == id));
+                    let found = self
+                        .items
+                        .iter()
+                        .any(|item| matches!(item, MenuItem::Item { id: iid, .. } if iid == id));
                     if found {
                         Ok(serde_json::json!({ "selected": id }))
                     } else {

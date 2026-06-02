@@ -1,19 +1,27 @@
 //! Color picker widget — an interactive color selector.
 
 use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// Persistent state for a color picker.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorPickerState {
     pub color: Color,
 }
 
 impl ColorPickerState {
+    #[must_use]
     pub fn new(color: Color) -> Self {
         Self { color }
+    }
+}
+
+impl Default for ColorPickerState {
+    fn default() -> Self {
+        Self { color: Color::WHITE }
     }
 }
 
@@ -24,20 +32,33 @@ impl ColorPickerState {
 pub struct ColorPicker {
     label: String,
     show_alpha: bool,
+    style: Style,
     agent_id: String,
 }
 
 impl ColorPicker {
+    #[must_use]
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
             show_alpha: true,
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
 
     pub fn show_alpha(mut self, show: bool) -> Self {
         self.show_alpha = show;
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
         self
     }
 
@@ -160,11 +181,7 @@ impl StatefulWidget for ColorPicker {
 
         // Label to the right
         if !self.label.is_empty() {
-            let ts = TextStyle {
-                font_size: 14.0,
-                color: Color::WHITE,
-                ..Default::default()
-            };
+            let ts = self.style.resolved_text();
             frame.painter().text(
                 Position::new(area.x + swatch_size + 8.0, area.y + 4.0),
                 &self.label,

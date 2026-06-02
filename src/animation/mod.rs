@@ -464,7 +464,7 @@ pub struct KeyframeSequence {
 impl KeyframeSequence {
     /// Create a new keyframe sequence. Keyframes are sorted by time internally.
     pub fn new(mut keyframes: Vec<Keyframe>) -> Self {
-        keyframes.sort_by(|a, b| a.time.cmp(&b.time));
+        keyframes.sort_by_key(|a| a.time);
         Self {
             keyframes,
             elapsed: Duration::ZERO,

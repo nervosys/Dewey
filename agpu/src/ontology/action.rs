@@ -53,6 +53,7 @@ pub enum ActionParamType {
 
 impl AgentAction {
     /// Create a simple action with no parameters.
+    #[must_use]
     pub fn simple(name: impl Into<String>, description: impl Into<String>, mutates: bool) -> Self {
         Self {
             name: name.into(),
@@ -66,6 +67,7 @@ impl AgentAction {
     }
 
     /// Create an action with the given parameters.
+    #[must_use]
     pub fn with_params(
         name: impl Into<String>,
         description: impl Into<String>,
@@ -169,6 +171,7 @@ impl ActionParamType {
 
 impl ActionParam {
     /// Create a required parameter.
+    #[must_use]
     pub fn required(
         name: impl Into<String>,
         description: impl Into<String>,
@@ -184,6 +187,7 @@ impl ActionParam {
     }
 
     /// Create an optional parameter with a default.
+    #[must_use]
     pub fn optional(
         name: impl Into<String>,
         description: impl Into<String>,

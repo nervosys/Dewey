@@ -14,9 +14,15 @@ pub struct List {
     pub selected: Option<usize>,
     pub scroll_offset: f32,
     pub item_height: f32,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl List {
+    #[must_use]
     pub fn new(id: impl Into<String>, items: Vec<String>) -> Self {
         Self {
             id: id.into(),
@@ -24,22 +30,61 @@ impl List {
             selected: None,
             scroll_offset: 0.0,
             item_height: 28.0,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
     }
 
+    #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = Some(index);
+        self
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
         self
     }
 }
 
 impl Widget for List {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        painter.fill_rect(area, Color::rgba(0.12, 0.12, 0.15, 1.0), 3.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.12, 0.12, 0.15, 1.0));
+        let radius = self.corner_radius.unwrap_or(3.0);
+        painter.fill_rect(area, bg, radius);
 
+        let text_color = self.fg_color.unwrap_or(Color::WHITE);
         let style = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(14.0),
+            color: text_color,
             ..TextStyle::default()
         };
 
@@ -164,9 +209,15 @@ pub struct Table {
     pub scroll_offset: f32,
     pub row_height: f32,
     pub header_height: f32,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Table {
+    #[must_use]
     pub fn new(id: impl Into<String>, columns: Vec<String>, rows: Vec<Vec<String>>) -> Self {
         Self {
             id: id.into(),
@@ -176,20 +227,58 @@ impl Table {
             scroll_offset: 0.0,
             row_height: 28.0,
             header_height: 32.0,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
     }
 }
 
 impl Widget for Table {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        painter.fill_rect(area, Color::rgba(0.1, 0.1, 0.13, 1.0), 3.0);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.1, 0.1, 0.13, 1.0));
+        let radius = self.corner_radius.unwrap_or(3.0);
+        painter.fill_rect(area, bg, radius);
 
         let col_count = self.columns.len().max(1);
         let col_width = area.width / col_count as f32;
+        let fs = self.font_size.unwrap_or(13.0);
 
         let header_style = TextStyle {
-            font_size: 13.0,
-            color: Color::rgba(0.7, 0.7, 0.8, 1.0),
+            font_size: fs,
+            color: self.fg_color.unwrap_or(Color::rgba(0.7, 0.7, 0.8, 1.0)),
             ..TextStyle::default()
         };
 
@@ -210,8 +299,8 @@ impl Widget for Table {
 
         // Rows
         let row_style = TextStyle {
-            font_size: 13.0,
-            color: Color::WHITE,
+            font_size: fs,
+            color: self.fg_color.unwrap_or(Color::WHITE),
             ..TextStyle::default()
         };
 

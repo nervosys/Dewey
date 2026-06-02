@@ -246,6 +246,26 @@ impl Margin {
     pub fn vertical(&self) -> f32 {
         self.top + self.bottom
     }
+
+    /// Create margins with only top and bottom, leaving left and right at zero.
+    pub const fn top_bottom(v: f32) -> Self {
+        Self {
+            top: v,
+            right: 0.0,
+            bottom: v,
+            left: 0.0,
+        }
+    }
+
+    /// Create margins with only left and right, leaving top and bottom at zero.
+    pub const fn left_right(h: f32) -> Self {
+        Self {
+            top: 0.0,
+            right: h,
+            bottom: 0.0,
+            left: h,
+        }
+    }
 }
 
 #[cfg(test)]

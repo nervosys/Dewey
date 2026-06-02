@@ -195,19 +195,31 @@ impl Discoverable for WindowManager {
             AgentAction::with_params(
                 "open",
                 "Open a new window",
-                vec![ActionParam::required("title", "Window title", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "title",
+                    "Window title",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "close",
                 "Close a window by ID",
-                vec![ActionParam::required("id", "Window ID", ActionParamType::Index)],
+                vec![ActionParam::required(
+                    "id",
+                    "Window ID",
+                    ActionParamType::Index,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "focus",
                 "Set focus to a window",
-                vec![ActionParam::required("id", "Window ID", ActionParamType::Index)],
+                vec![ActionParam::required(
+                    "id",
+                    "Window ID",
+                    ActionParamType::Index,
+                )],
                 true,
             ),
             AgentAction::with_params(
@@ -258,10 +270,7 @@ impl Discoverable for WindowManager {
     ) -> Result<serde_json::Value, String> {
         match action {
             "open" => {
-                let title = params["title"]
-                    .as_str()
-                    .ok_or("missing title")?
-                    .to_string();
+                let title = params["title"].as_str().ok_or("missing title")?.to_string();
                 let id = self.open(WindowConfig::new(title));
                 Ok(serde_json::json!({ "id": id }))
             }

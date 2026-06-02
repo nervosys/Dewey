@@ -112,13 +112,15 @@ pub use event::{
 /// Prelude — import everything commonly needed.
 pub mod prelude {
     pub use crate::app::AgpuApp;
-    pub use crate::core::{Color, Position, Rect, Size, TextStyle};
-    pub use crate::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent};
+    pub use crate::core::{Color, FontWeight, Margin, Position, Rect, Size, TextStyle};
+    pub use crate::event::{
+        Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+    };
     pub use crate::ontology::{
         AgentAction, AgentCapability, Discoverable, OntologyRegistry, SemanticRole, UiNode,
         WidgetSchema,
     };
-    pub use crate::paint::{NullPainter, Painter};
+    pub use crate::paint::{NullPainter, Painter, Shadow};
     pub use crate::runtime::{Command, Frame, Model, ProgramOptions};
     pub use crate::types::BackendPreference;
 }

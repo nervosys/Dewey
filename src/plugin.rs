@@ -61,7 +61,11 @@ impl PluginRegistry {
     /// Initialize all registered plugins.
     pub fn init_all(&mut self, ctx: &mut PluginContext<'_>) {
         for plugin in &mut self.plugins {
-            log::info!("Initializing plugin: {} v{}", plugin.name(), plugin.version());
+            log::info!(
+                "Initializing plugin: {} v{}",
+                plugin.name(),
+                plugin.version()
+            );
             plugin.init(ctx);
         }
     }
@@ -112,7 +116,8 @@ impl Discoverable for PluginRegistry {
             "Manages third-party plugins that extend the framework",
             SemanticRole::System,
         );
-        schema.usage_hint = Some("registry.register(MyPlugin); registry.init_all(&mut ctx);".into());
+        schema.usage_hint =
+            Some("registry.register(MyPlugin); registry.init_all(&mut ctx);".into());
         schema.tags = vec!["plugin".into(), "extension".into(), "registry".into()];
         schema
     }
@@ -122,9 +127,11 @@ impl Discoverable for PluginRegistry {
     }
 
     fn actions(&self) -> Vec<AgentAction> {
-        vec![
-            AgentAction::simple("list", "List all registered plugins", false),
-        ]
+        vec![AgentAction::simple(
+            "list",
+            "List all registered plugins",
+            false,
+        )]
     }
 
     fn semantic_role(&self) -> SemanticRole {
@@ -135,9 +142,7 @@ impl Discoverable for PluginRegistry {
         let plugins: Vec<serde_json::Value> = self
             .list()
             .iter()
-            .map(|(name, version)| {
-                serde_json::json!({ "name": name, "version": version })
-            })
+            .map(|(name, version)| serde_json::json!({ "name": name, "version": version }))
             .collect();
         serde_json::json!({
             "plugin_count": self.plugins.len(),

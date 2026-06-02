@@ -265,8 +265,8 @@ mod tests {
     #[test]
     fn vertical_split() {
         let area = Rect::new(0.0, 0.0, 200.0, 400.0);
-        let chunks = Layout::vertical(vec![Constraint::Length(100.0), Constraint::Fill(1.0)])
-            .split(area);
+        let chunks =
+            Layout::vertical(vec![Constraint::Length(100.0), Constraint::Fill(1.0)]).split(area);
         assert_eq!(chunks.len(), 2);
         assert!((chunks[0].height - 100.0).abs() < 0.01);
         assert!((chunks[1].height - 300.0).abs() < 0.01);

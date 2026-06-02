@@ -11,27 +11,61 @@ use crate::widget::Widget;
 pub struct Tooltip {
     pub id: String,
     pub text: String,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
 }
 
 impl Tooltip {
+    #[must_use]
     pub fn new(id: impl Into<String>, text: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             text: text.into(),
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
     }
 }
 
 impl Widget for Tooltip {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        let bg = Color::rgba(0.12, 0.12, 0.16, 0.95);
+        let bg = self.bg_color.unwrap_or(Color::rgba(0.12, 0.12, 0.16, 0.95));
         let border = Color::rgba(0.35, 0.35, 0.45, 1.0);
-        painter.fill_rect(area, bg, 4.0);
-        painter.stroke_rect(area, border, 1.0, 4.0);
+        let radius = self.corner_radius.unwrap_or(4.0);
+        painter.fill_rect(area, bg, radius);
+        painter.stroke_rect(area, border, 1.0, radius);
 
         let style = TextStyle {
-            font_size: 12.0,
-            color: Color::rgba(0.9, 0.9, 0.9, 1.0),
+            font_size: self.font_size.unwrap_or(12.0),
+            color: self.fg_color.unwrap_or(Color::rgba(0.9, 0.9, 0.9, 1.0)),
             ..TextStyle::default()
         };
         let padding = 6.0;
@@ -49,7 +83,11 @@ impl Widget for Tooltip {
 
 impl Discoverable for Tooltip {
     fn schema(&self) -> WidgetSchema {
-        WidgetSchema::new("Tooltip", "A tooltip popup showing help text", SemanticRole::Display)
+        WidgetSchema::new(
+            "Tooltip",
+            "A tooltip popup showing help text",
+            SemanticRole::Display,
+        )
     }
 
     fn capabilities(&self) -> Vec<AgentCapability> {
@@ -57,9 +95,11 @@ impl Discoverable for Tooltip {
     }
 
     fn actions(&self) -> Vec<AgentAction> {
-        vec![
-            AgentAction::simple("set_text", "Set tooltip text content", true),
-        ]
+        vec![AgentAction::simple(
+            "set_text",
+            "Set tooltip text content",
+            true,
+        )]
     }
 
     fn semantic_role(&self) -> SemanticRole {

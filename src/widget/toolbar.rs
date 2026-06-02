@@ -1,7 +1,6 @@
 //! Toolbar widget — a horizontal row of action buttons.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -22,6 +21,7 @@ pub struct ToolbarItem {
 }
 
 impl ToolbarItem {
+    #[must_use]
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -51,15 +51,33 @@ impl ToolbarItem {
 /// A horizontal toolbar of action buttons.
 pub struct Toolbar {
     items: Vec<ToolbarItem>,
+    style: Style,
     agent_id: String,
 }
 
 impl Toolbar {
+    #[must_use]
     pub fn new(items: Vec<ToolbarItem>) -> Self {
         Self {
             items,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -182,18 +200,12 @@ impl Widget for Toolbar {
         }
 
         // Toolbar background
-        frame.painter().fill_rect(area, Color::DARK_GRAY, 0.0);
+        let toolbar_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
+        frame.painter().fill_rect(area, toolbar_bg, 0.0);
 
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
-        let disabled_ts = TextStyle {
-            font_size: 14.0,
-            color: Color::GRAY,
-            ..Default::default()
-        };
+        let ts = self.style.resolved_text();
+        let mut disabled_ts = ts.clone();
+        disabled_ts.color = Color::GRAY;
         let mut x = area.x + 4.0;
         for item in &self.items {
             let style = if item.enabled { &ts } else { &disabled_ts };

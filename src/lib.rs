@@ -113,7 +113,10 @@ pub mod window;
 pub mod prelude {
     #[cfg(feature = "agpu-backend")]
     pub use crate::backend::agpu_backend::{AgpuBridgePainter, AgpuProgram};
-    pub use crate::core::{Color, Margin, Position, Rect, Size, Style};
+    pub use crate::core::{
+        Alignment, Color, FontWeight, Margin, Position, Rect, Shadow, Size, Style, TextStyle,
+        VerticalAlignment,
+    };
     pub use crate::error::{Error, Result};
     pub use crate::event::{
         DragDropEvent, DragDropKind, DragPayload, Event, KeyCode, KeyEvent, KeyModifiers,

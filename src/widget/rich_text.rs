@@ -30,6 +30,7 @@ pub struct TextSpan {
 
 impl TextSpan {
     /// Create a plain text span.
+    #[must_use]
     pub fn plain(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
@@ -43,6 +44,7 @@ impl TextSpan {
     }
 
     /// Create a bold text span.
+    #[must_use]
     pub fn bold(text: impl Into<String>) -> Self {
         Self {
             bold: true,
@@ -51,6 +53,7 @@ impl TextSpan {
     }
 
     /// Create an italic text span.
+    #[must_use]
     pub fn italic(text: impl Into<String>) -> Self {
         Self {
             italic: true,
@@ -59,6 +62,7 @@ impl TextSpan {
     }
 
     /// Create a code (monospace) text span.
+    #[must_use]
     pub fn code(text: impl Into<String>) -> Self {
         Self {
             code: true,
@@ -67,6 +71,7 @@ impl TextSpan {
     }
 
     /// Create a link text span.
+    #[must_use]
     pub fn link(text: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
             link: Some(url.into()),
@@ -92,6 +97,7 @@ pub struct RichText {
 
 impl RichText {
     /// Create from a list of styled spans.
+    #[must_use]
     pub fn new(spans: Vec<TextSpan>) -> Self {
         Self {
             spans,

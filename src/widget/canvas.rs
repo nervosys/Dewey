@@ -68,6 +68,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             agent_id: String::new(),

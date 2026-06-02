@@ -344,9 +344,7 @@ mod tests {
         let mut mgr = PluginManager::new();
         mgr.register(Box::new(TestPlugin::new())).unwrap();
         mgr.load("test-plugin").unwrap();
-        let result = mgr
-            .dispatch("test-plugin", "ping", &json!(null))
-            .unwrap();
+        let result = mgr.dispatch("test-plugin", "ping", &json!(null)).unwrap();
         assert_eq!(result, json!("pong"));
     }
 
@@ -354,9 +352,7 @@ mod tests {
     fn dispatch_to_unloaded_fails() {
         let mut mgr = PluginManager::new();
         mgr.register(Box::new(TestPlugin::new())).unwrap();
-        assert!(mgr
-            .dispatch("test-plugin", "ping", &json!(null))
-            .is_err());
+        assert!(mgr.dispatch("test-plugin", "ping", &json!(null)).is_err());
     }
 
     #[test]
@@ -380,8 +376,7 @@ mod tests {
 
     #[test]
     fn plugin_metadata_builder() {
-        let meta = PluginMetadata::new("my-plugin", "2.0.0", "My plugin")
-            .author("Test Author");
+        let meta = PluginMetadata::new("my-plugin", "2.0.0", "My plugin").author("Test Author");
         assert_eq!(meta.author, "Test Author");
     }
 }

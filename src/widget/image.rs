@@ -1,7 +1,6 @@
 //! Image widget — displays images from URI or raw RGBA pixel data.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -10,6 +9,7 @@ use crate::widget::Widget;
 pub struct Image {
     source: ImageSource,
     alt: String,
+    style: Style,
     agent_id: String,
     fit: ImageFit,
 }
@@ -42,15 +42,18 @@ pub enum ImageFit {
 }
 
 impl Image {
+    #[must_use]
     pub fn from_uri(uri: impl Into<String>) -> Self {
         Self {
             source: ImageSource::Uri(uri.into()),
             alt: String::new(),
+            style: Style::default(),
             agent_id: String::new(),
             fit: ImageFit::default(),
         }
     }
 
+    #[must_use]
     pub fn from_rgba(width: u32, height: u32, pixels: Vec<u8>) -> Self {
         Self {
             source: ImageSource::Rgba {
@@ -59,6 +62,7 @@ impl Image {
                 pixels,
             },
             alt: String::new(),
+            style: Style::default(),
             agent_id: String::new(),
             fit: ImageFit::default(),
         }
@@ -155,11 +159,13 @@ impl Widget for Image {
         } else {
             &self.alt
         };
-        let ts = TextStyle {
-            font_size: 12.0,
-            color: Color::GRAY,
-            ..Default::default()
-        };
+        let mut ts = self.style.resolved_text();
+        if ts.font_size == 14.0 {
+            ts.font_size = 12.0;
+        }
+        if ts.color == Color::WHITE {
+            ts.color = Color::GRAY;
+        }
         let sz = frame.painter().measure_text(label, &ts);
         let tx = area.x + (area.width - sz.width) * 0.5;
         let ty = area.y + (area.height - sz.height) * 0.5;

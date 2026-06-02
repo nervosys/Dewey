@@ -10,7 +10,7 @@ repository = "https://github.com/nervosys/Dewey"
 homepage = "https://github.com/nervosys/Dewey/tree/master/agpu"
 documentation = "https://docs.rs/agpu"
 readme = "README.md"
-keywords = ["gpu", "wgpu", "rendering", "agent", "ontology", "opengl", "vulkan"]
+keywords = ["gpu", "wgpu", "rendering", "agent", "ontology"]
 categories = ["rendering", "graphics", "gui"]
 
 [dependencies]

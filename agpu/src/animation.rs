@@ -19,7 +19,10 @@ pub enum Easing {
     EaseInCubic,
     EaseOutCubic,
     EaseInOutCubic,
-    Spring { stiffness: f32, damping: f32 },
+    Spring {
+        stiffness: f32,
+        damping: f32,
+    },
 }
 
 impl Easing {
@@ -55,15 +58,13 @@ impl Easing {
                     1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
                 }
             }
-            Self::Spring {
-                stiffness,
-                damping,
-            } => {
+            Self::Spring { stiffness, damping } => {
                 let omega = stiffness.sqrt();
                 let zeta = damping / (2.0 * omega);
                 if zeta < 1.0 {
                     let wd = omega * (1.0 - zeta * zeta).sqrt();
-                    1.0 - (-zeta * omega * t).exp() * ((wd * t).cos() + zeta / (1.0 - zeta * zeta).sqrt() * (wd * t).sin())
+                    1.0 - (-zeta * omega * t).exp()
+                        * ((wd * t).cos() + zeta / (1.0 - zeta * zeta).sqrt() * (wd * t).sin())
                 } else {
                     1.0 - (1.0 + omega * t) * (-omega * t).exp()
                 }
@@ -71,8 +72,6 @@ impl Easing {
         }
     }
 }
-
-
 
 /// State of an animation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -190,11 +189,7 @@ impl Animation {
             RepeatMode::Loop => raw_t.fract(),
             RepeatMode::PingPong => {
                 let cycle = raw_t % 2.0;
-                if cycle > 1.0 {
-                    2.0 - cycle
-                } else {
-                    cycle
-                }
+                if cycle > 1.0 { 2.0 - cycle } else { cycle }
             }
             RepeatMode::Count(n) => {
                 if raw_t >= n as f64 {
@@ -360,8 +355,8 @@ mod tests {
 
     #[test]
     fn animation_loop() {
-        let mut anim = Animation::new("x", 0.0, 1.0, Duration::from_millis(100))
-            .repeat(RepeatMode::Loop);
+        let mut anim =
+            Animation::new("x", 0.0, 1.0, Duration::from_millis(100)).repeat(RepeatMode::Loop);
         anim.start();
         anim.tick(Duration::from_millis(150));
         assert_eq!(anim.state(), AnimationState::Running); // Still going

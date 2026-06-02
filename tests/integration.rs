@@ -821,3 +821,215 @@ fn chart_bar_and_pie() {
     let pie = Chart::pie("Share");
     assert_eq!(pie.agent_state()["kind"], "Pie");
 }
+
+// ── Color API tests ─────────────────────────────────────────────────
+
+#[test]
+fn color_hex_rgb() {
+    let c = Color::hex("#FF8800");
+    assert!((c.r - 1.0).abs() < 0.01);
+    assert!((c.g - 0.533).abs() < 0.01);
+    assert!((c.b - 0.0).abs() < 0.01);
+    assert!((c.a - 1.0).abs() < 0.01);
+}
+
+#[test]
+fn color_hex_rgba() {
+    let c = Color::hex("#FF880080");
+    assert!((c.r - 1.0).abs() < 0.01);
+    assert!((c.a - 0.502).abs() < 0.01);
+}
+
+#[test]
+fn color_hex_no_hash() {
+    let c = Color::from_hex("1A2B3C").unwrap();
+    assert!((c.r - 0.102).abs() < 0.01);
+}
+
+#[test]
+fn color_from_hex_invalid() {
+    assert!(Color::from_hex("#ZZZ").is_none());
+    assert!(Color::from_hex("#12345").is_none());
+    assert!(Color::from_hex("").is_none());
+}
+
+#[test]
+#[should_panic(expected = "invalid hex color")]
+fn color_hex_panics_on_invalid() {
+    let _ = Color::hex("#NOPE");
+}
+
+#[test]
+fn color_from_rgb8() {
+    let c = Color::from_rgb8(255, 128, 0);
+    assert!((c.r - 1.0).abs() < 0.01);
+    assert!((c.g - 0.502).abs() < 0.01);
+    assert!((c.b - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn color_with_alpha() {
+    let c = Color::RED.with_alpha(0.5);
+    assert!((c.r - 1.0).abs() < 0.01);
+    assert!((c.a - 0.5).abs() < 0.01);
+}
+
+#[test]
+fn color_constants_distinct() {
+    assert_ne!(Color::RED, Color::BLUE);
+    assert_ne!(Color::ORANGE, Color::PURPLE);
+    assert_ne!(Color::PINK, Color::BROWN);
+    assert_ne!(Color::INDIGO, Color::CYAN);
+    assert_ne!(Color::BLACK, Color::WHITE);
+}
+
+// ── TextStyle builder tests ─────────────────────────────────────────
+
+#[test]
+fn text_style_builder_chain() {
+    use dewey::core::{FontWeight, TextStyle};
+
+    let ts = TextStyle::new()
+        .size(24.0)
+        .color(Color::RED)
+        .bold()
+        .italic();
+    assert!((ts.font_size - 24.0).abs() < f32::EPSILON);
+    assert_eq!(ts.color, Color::RED);
+    assert_eq!(ts.weight, FontWeight::Bold);
+    assert!(ts.italic);
+}
+
+#[test]
+fn text_style_defaults() {
+    use dewey::core::{FontWeight, TextStyle};
+
+    let ts = TextStyle::new();
+    assert!((ts.font_size - 14.0).abs() < f32::EPSILON);
+    assert_eq!(ts.color, Color::WHITE);
+    assert_eq!(ts.weight, FontWeight::Regular);
+    assert!(!ts.italic);
+    assert!(!ts.underline);
+    assert!(!ts.strikethrough);
+}
+
+// ── Style builder tests ─────────────────────────────────────────────
+
+#[test]
+fn style_builder_chain() {
+    let s = Style::new()
+        .bg(Color::DARK_GRAY)
+        .fg(Color::WHITE)
+        .rounded(12.0)
+        .text_size(18.0)
+        .bold();
+    assert_eq!(s.background, Some(Color::DARK_GRAY));
+    assert_eq!(s.foreground, Some(Color::WHITE));
+    assert_eq!(s.border_radius, Some(12.0));
+    let ts = s.resolved_text();
+    assert!((ts.font_size - 18.0).abs() < f32::EPSILON);
+    assert_eq!(ts.color, Color::WHITE); // inherits fg
+}
+
+#[test]
+fn style_resolved_text_inherits_fg() {
+    let s = Style::new().fg(Color::RED);
+    let ts = s.resolved_text();
+    assert_eq!(ts.color, Color::RED);
+}
+
+#[test]
+fn style_resolved_text_explicit_color_wins() {
+    let s = Style::new().fg(Color::RED).text_color(Color::BLUE);
+    let ts = s.resolved_text();
+    assert_eq!(ts.color, Color::BLUE);
+}
+
+#[test]
+fn style_resolved_text_no_overrides() {
+    let s = Style::new();
+    let ts = s.resolved_text();
+    assert!((ts.font_size - 14.0).abs() < f32::EPSILON);
+    assert_eq!(ts.color, Color::WHITE);
+}
+
+#[test]
+fn style_merge_override() {
+    let base = Style::new().bg(Color::BLACK).fg(Color::WHITE).rounded(4.0);
+    let over = Style::new().bg(Color::BLUE).text_size(20.0);
+    let merged = base.merge(&over);
+    assert_eq!(merged.background, Some(Color::BLUE)); // overridden
+    assert_eq!(merged.foreground, Some(Color::WHITE)); // inherited
+    assert_eq!(merged.border_radius, Some(4.0)); // inherited
+    assert!(merged.text.is_some());
+}
+
+#[test]
+fn style_opacity_clamps() {
+    let s = Style::new().opacity(1.5);
+    assert_eq!(s.opacity, Some(1.0));
+    let s = Style::new().opacity(-0.5);
+    assert_eq!(s.opacity, Some(0.0));
+}
+
+// ── Widget builder API tests ────────────────────────────────────────
+
+#[test]
+fn button_builder_api() {
+    let btn = Button::new("Save")
+        .bg(Color::BLUE)
+        .fg(Color::WHITE)
+        .rounded(8.0)
+        .text_size(16.0)
+        .enabled(false);
+    let state = btn.agent_state();
+    assert_eq!(state["label"], "Save");
+    assert_eq!(state["enabled"], false);
+}
+
+#[test]
+fn label_builder_api() {
+    let lbl = Label::new("Title")
+        .fg(Color::hex("#1A73E8"))
+        .text_size(24.0)
+        .bold();
+    assert_eq!(lbl.agent_state()["text"], "Title");
+}
+
+#[test]
+fn container_builder_api() {
+    let c = Container::new()
+        .bg(Color::DARK_GRAY)
+        .rounded(12.0)
+        .border(Color::GRAY, 1.0)
+        .title("Card");
+    assert_eq!(c.agent_state()["title"], "Card");
+}
+
+#[test]
+fn text_input_builder_api() {
+    let input = TextInput::new()
+        .placeholder("Search…")
+        .bg(Color::DARK_GRAY)
+        .fg(Color::WHITE)
+        .rounded(6.0);
+    assert_eq!(input.agent_state()["placeholder"], "Search…");
+}
+
+#[test]
+fn progress_bar_builder_api() {
+    let pb = ProgressBar::new(0.5)
+        .label("Loading")
+        .fg(Color::GREEN)
+        .bg(Color::DARK_GRAY);
+    assert_eq!(pb.agent_state()["progress"], 0.5);
+}
+
+#[test]
+fn select_builder_api() {
+    let sel = Select::new("Size", vec!["S".into(), "M".into(), "L".into()])
+        .bg(Color::DARK_GRAY)
+        .fg(Color::WHITE)
+        .rounded(4.0);
+    assert_eq!(sel.agent_state()["options"].as_array().unwrap().len(), 3);
+}

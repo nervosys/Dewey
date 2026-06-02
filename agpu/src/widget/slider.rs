@@ -14,9 +14,13 @@ pub struct Slider {
     pub min: f32,
     pub max: f32,
     pub step: Option<f32>,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
 }
 
 impl Slider {
+    #[must_use]
     pub fn new(id: impl Into<String>, value: f32, min: f32, max: f32) -> Self {
         Self {
             id: id.into(),
@@ -24,9 +28,13 @@ impl Slider {
             min,
             max,
             step: None,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
         }
     }
 
+    #[must_use]
     pub fn step(mut self, step: f32) -> Self {
         self.step = Some(step);
         self
@@ -40,6 +48,24 @@ impl Slider {
             (self.value - self.min) / (self.max - self.min)
         }
     }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
 }
 
 impl Widget for Slider {
@@ -47,12 +73,15 @@ impl Widget for Slider {
         let track_height = 4.0;
         let track_y = area.y + (area.height - track_height) * 0.5;
         let track = Rect::new(area.x, track_y, area.width, track_height);
+        let radius = self.corner_radius.unwrap_or(2.0);
 
-        painter.fill_rect(track, Color::rgba(0.3, 0.3, 0.35, 1.0), 2.0);
+        let track_color = self.bg_color.unwrap_or(Color::rgba(0.3, 0.3, 0.35, 1.0));
+        painter.fill_rect(track, track_color, radius);
 
         let t = self.normalized();
         let filled = Rect::new(area.x, track_y, area.width * t, track_height);
-        painter.fill_rect(filled, Color::rgba(0.2, 0.5, 1.0, 1.0), 2.0);
+        let fill_color = self.fg_color.unwrap_or(Color::rgba(0.2, 0.5, 1.0, 1.0));
+        painter.fill_rect(filled, fill_color, radius);
 
         let thumb_radius = 8.0;
         let thumb_x = area.x + area.width * t;

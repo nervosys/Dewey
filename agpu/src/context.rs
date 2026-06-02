@@ -30,12 +30,7 @@ impl GpuContext {
         surface: &wgpu::Surface<'_>,
         preference: BackendPreference,
     ) -> Result<Self, GpuError> {
-        let backends = match preference {
-            BackendPreference::VulkanPreferred => wgpu::Backends::VULKAN,
-            BackendPreference::OpenGLPreferred => wgpu::Backends::GL,
-            BackendPreference::PlatformDefault => wgpu::Backends::PRIMARY,
-            BackendPreference::Specific(b) => b,
-        };
+        let backends = preference.to_backends();
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,

@@ -1,7 +1,7 @@
 //! Tree widget — a hierarchical tree view.
 
 use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -15,6 +15,7 @@ pub struct TreeNode {
 }
 
 impl TreeNode {
+    #[must_use]
     pub fn leaf(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
@@ -23,6 +24,7 @@ impl TreeNode {
         }
     }
 
+    #[must_use]
     pub fn branch(label: impl Into<String>, children: Vec<TreeNode>) -> Self {
         Self {
             label: label.into(),
@@ -60,15 +62,28 @@ impl TreeNode {
 /// A hierarchical tree view.
 pub struct Tree {
     root: TreeNode,
+    style: Style,
     agent_id: String,
 }
 
 impl Tree {
+    #[must_use]
     pub fn new(root: TreeNode) -> Self {
         Self {
             root,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -218,11 +233,7 @@ impl Widget for Tree {
         }
 
         frame.painter().push_clip(area);
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let ts = self.style.resolved_text();
         let mut y_offset = area.y + 4.0;
         render_tree_node(frame, &self.root, 0, area.x, &mut y_offset, &ts);
         frame.painter().pop_clip();

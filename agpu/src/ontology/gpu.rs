@@ -16,7 +16,12 @@ impl Discoverable for ShapeRendererOntology {
             "Batched 2D shape renderer — fills, strokes, circles, and lines",
             SemanticRole::System,
         );
-        s.tags = vec!["gpu".into(), "renderer".into(), "2d".into(), "shapes".into()];
+        s.tags = vec![
+            "gpu".into(),
+            "renderer".into(),
+            "2d".into(),
+            "shapes".into(),
+        ];
         s
     }
 
@@ -209,11 +214,7 @@ impl Discoverable for AgpuAppOntology {
     fn actions(&self) -> Vec<AgentAction> {
         vec![
             AgentAction::simple("quit", "Close the application", false),
-            AgentAction::simple(
-                "export_ontology",
-                "Export ontology registry as JSON",
-                false,
-            ),
+            AgentAction::simple("export_ontology", "Export ontology registry as JSON", false),
         ]
     }
 

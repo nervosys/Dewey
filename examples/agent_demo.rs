@@ -33,10 +33,10 @@ impl Model for App {
     fn view(&self, frame: &mut Frame<'_>) {
         let area = frame.area;
 
-        let chunks = Layout::new(Direction::Vertical, [
-            Constraint::Length(40.0),
-            Constraint::Length(40.0),
-        ])
+        let chunks = Layout::new(
+            Direction::Vertical,
+            [Constraint::Length(40.0), Constraint::Length(40.0)],
+        )
         .split(area);
 
         Label::new(format!("Count: {}", self.count))

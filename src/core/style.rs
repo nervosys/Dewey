@@ -5,7 +5,20 @@
 
 use serde::{Deserialize, Serialize};
 
-/// RGBA color with f32 components in [0.0, 1.0].
+/// RGBA color with f32 components in \[0.0, 1.0\].
+///
+/// Use named constants (`Color::RED`, `Color::BLUE`), hex strings
+/// ([`Color::hex`]), or 0-255 integers ([`Color::from_rgb8`]).
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::core::Color;
+/// let red   = Color::RED;
+/// let brand = Color::hex("#1A73E8");
+/// let soft  = Color::from_rgb8(200, 180, 160);
+/// let half  = red.with_alpha(0.5);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Color {
     pub r: f32,
@@ -33,6 +46,25 @@ impl Color {
     pub const GRAY: Self = Self::rgb(0.5, 0.5, 0.5);
     pub const DARK_GRAY: Self = Self::rgb(0.25, 0.25, 0.25);
     pub const LIGHT_GRAY: Self = Self::rgb(0.75, 0.75, 0.75);
+    pub const ORANGE: Self = Self::rgb(1.0, 0.647, 0.0);
+    pub const PURPLE: Self = Self::rgb(0.502, 0.0, 0.502);
+    pub const PINK: Self = Self::rgb(1.0, 0.412, 0.706);
+    pub const BROWN: Self = Self::rgb(0.647, 0.165, 0.165);
+    pub const INDIGO: Self = Self::rgb(0.294, 0.0, 0.51);
+
+    /// Parse a hex color string: `"#RRGGBB"` or `"#RRGGBBAA"`.
+    ///
+    /// Panics if the hex string is invalid. Use [`from_hex`](Self::from_hex)
+    /// for fallible parsing.
+    ///
+    /// ```
+    /// # use dewey::core::Color;
+    /// let c = Color::hex("#1A2B3C");
+    /// ```
+    #[must_use]
+    pub fn hex(hex: &str) -> Self {
+        Self::from_hex(hex).expect("invalid hex color")
+    }
 
     #[must_use]
     pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
@@ -121,7 +153,10 @@ impl From<egui::Color32> for Color {
     }
 }
 
-/// Font weight categories.
+/// Font weight categories for text rendering.
+///
+/// Defaults to [`FontWeight::Regular`]. Use [`TextStyle::bold`] as a
+/// shorthand for [`FontWeight::Bold`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum FontWeight {
     Thin,
@@ -134,7 +169,14 @@ pub enum FontWeight {
     ExtraBold,
 }
 
-/// Text style properties.
+/// Text style properties for font size, color, weight, and decorations.
+///
+/// Build with a chainable API:
+///
+/// ```
+/// # use dewey::core::{TextStyle, FontWeight, Color};
+/// let heading = TextStyle::new().size(24.0).bold().color(Color::WHITE);
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextStyle {
     pub font_size: f32,
@@ -162,7 +204,64 @@ impl Default for TextStyle {
     }
 }
 
+impl TextStyle {
+    /// Create a new text style with default values.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set font size.
+    #[must_use]
+    pub fn size(mut self, size: f32) -> Self {
+        self.font_size = size;
+        self
+    }
+
+    /// Set text color.
+    #[must_use]
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = color;
+        self
+    }
+
+    /// Set font weight.
+    #[must_use]
+    pub fn weight(mut self, weight: FontWeight) -> Self {
+        self.weight = weight;
+        self
+    }
+
+    /// Set bold weight.
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.weight = FontWeight::Bold;
+        self
+    }
+
+    /// Set italic.
+    #[must_use]
+    pub fn italic(mut self) -> Self {
+        self.italic = true;
+        self
+    }
+}
+
 /// Visual style for a widget, composable with optional overrides.
+///
+/// Every field is `Option` — only set values take effect. Styles compose
+/// via [`Style::merge`] (non-None fields in the overlay win).
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::core::{Style, Color};
+/// let card = Style::new()
+///     .bg(Color::DARK_GRAY)
+///     .fg(Color::WHITE)
+///     .rounded(12.0)
+///     .text_size(16.0);
+/// ```
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Style {
     pub foreground: Option<Color>,
@@ -225,7 +324,58 @@ impl Style {
         self
     }
 
+    /// Set text font size (creates/updates embedded [`TextStyle`]).
+    ///
+    /// ```
+    /// # use dewey::core::Style;
+    /// let heading = Style::new().text_size(24.0);
+    /// ```
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.text.get_or_insert_with(TextStyle::default).font_size = size;
+        self
+    }
+
+    /// Set text color (creates/updates embedded TextStyle).
+    #[must_use]
+    pub fn text_color(mut self, color: Color) -> Self {
+        self.text.get_or_insert_with(TextStyle::default).color = color;
+        self
+    }
+
+    /// Set bold text weight (creates/updates embedded TextStyle).
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.text.get_or_insert_with(TextStyle::default).weight = FontWeight::Bold;
+        self
+    }
+
+    /// Resolve the text style, merging with defaults.
+    ///
+    /// Returns a complete [`TextStyle`] by:
+    /// 1. Starting from `self.text` (or [`TextStyle::default`] if unset).
+    /// 2. Inheriting `self.foreground` as the text color when no explicit
+    ///    text color override has been applied.
+    #[must_use]
+    pub fn resolved_text(&self) -> TextStyle {
+        let mut ts = self.text.clone().unwrap_or_default();
+        // If foreground is set but no explicit text color override, use foreground.
+        if self.foreground.is_some() && self.text.as_ref().is_none_or(|t| t.color == Color::WHITE) {
+            ts.color = self.foreground.unwrap_or(Color::WHITE);
+        }
+        ts
+    }
+
     /// Merge another style on top. Non-None fields in `other` override `self`.
+    ///
+    /// ```
+    /// # use dewey::core::{Style, Color};
+    /// let base = Style::new().bg(Color::BLACK).fg(Color::WHITE);
+    /// let highlight = Style::new().bg(Color::BLUE);
+    /// let merged = base.merge(&highlight);
+    /// assert_eq!(merged.background, Some(Color::BLUE));   // overridden
+    /// assert_eq!(merged.foreground, Some(Color::WHITE));   // inherited
+    /// ```
     #[must_use]
     pub fn merge(&self, other: &Style) -> Style {
         Style {
@@ -254,7 +404,12 @@ impl Style {
     }
 }
 
-/// Drop shadow specification.
+/// Drop shadow specification for widgets.
+///
+/// ```
+/// # use dewey::core::style::{Shadow, Color};
+/// let drop = Shadow::new(2.0, 4.0, 8.0, Color::BLACK.with_alpha(0.3));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Shadow {
     pub offset_x: f32,

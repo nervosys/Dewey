@@ -417,9 +417,10 @@ mod tests {
     fn registry_validate_action_params_unknown_type() {
         let reg = OntologyRegistry::new();
         // Unknown widget type should pass validation (permissive)
-        assert!(reg
-            .validate_action_params("Unknown", "click", &serde_json::json!({}))
-            .is_ok());
+        assert!(
+            reg.validate_action_params("Unknown", "click", &serde_json::json!({}))
+                .is_ok()
+        );
     }
 
     #[test]

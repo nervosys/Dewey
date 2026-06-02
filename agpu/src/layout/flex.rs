@@ -156,8 +156,7 @@ impl Layout for FlexLayout {
                 let total_child_width: f32 = children.iter().map(|c| c.width).sum();
                 let total_spacing = self.spacing * (children.len() as f32 - 1.0).max(0.0);
                 let remaining = (area.width - total_child_width - total_spacing).max(0.0);
-                let (start_offset, inter_spacing) =
-                    self.justify_offsets(remaining, children.len());
+                let (start_offset, inter_spacing) = self.justify_offsets(remaining, children.len());
 
                 let mut x = area.x + start_offset;
                 for child in children {
@@ -175,8 +174,7 @@ impl Layout for FlexLayout {
                 let total_child_height: f32 = children.iter().map(|c| c.height).sum();
                 let total_spacing = self.spacing * (children.len() as f32 - 1.0).max(0.0);
                 let remaining = (area.height - total_child_height - total_spacing).max(0.0);
-                let (start_offset, inter_spacing) =
-                    self.justify_offsets(remaining, children.len());
+                let (start_offset, inter_spacing) = self.justify_offsets(remaining, children.len());
 
                 let mut y = area.y + start_offset;
                 for child in children {

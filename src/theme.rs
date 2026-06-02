@@ -228,7 +228,12 @@ impl Discoverable for Theme {
             SemanticRole::System,
         );
         schema.usage_hint = Some("Theme::dark() or Theme::light()".into());
-        schema.tags = vec!["theme".into(), "color".into(), "style".into(), "appearance".into()];
+        schema.tags = vec![
+            "theme".into(),
+            "color".into(),
+            "style".into(),
+            "appearance".into(),
+        ];
         schema
     }
 
@@ -242,21 +247,38 @@ impl Discoverable for Theme {
                 "set_token",
                 "Set a theme token color (r, g, b, a as 0.0-1.0)",
                 vec![
-                    ActionParam::required("token", "Token name (e.g. Primary, Background)", ActionParamType::String),
+                    ActionParam::required(
+                        "token",
+                        "Token name (e.g. Primary, Background)",
+                        ActionParamType::String,
+                    ),
                     ActionParam::required("r", "Red channel 0.0-1.0", ActionParamType::Float),
                     ActionParam::required("g", "Green channel 0.0-1.0", ActionParamType::Float),
                     ActionParam::required("b", "Blue channel 0.0-1.0", ActionParamType::Float),
-                    ActionParam::optional("a", "Alpha channel 0.0-1.0", ActionParamType::Float, serde_json::json!(1.0)),
+                    ActionParam::optional(
+                        "a",
+                        "Alpha channel 0.0-1.0",
+                        ActionParamType::Float,
+                        serde_json::json!(1.0),
+                    ),
                 ],
                 true,
             ),
             AgentAction::with_params(
                 "get_token",
                 "Get the color for a theme token",
-                vec![ActionParam::required("token", "Token name", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "token",
+                    "Token name",
+                    ActionParamType::String,
+                )],
                 false,
             ),
-            AgentAction::simple("list_tokens", "List all theme tokens and their values", false),
+            AgentAction::simple(
+                "list_tokens",
+                "List all theme tokens and their values",
+                false,
+            ),
         ]
     }
 

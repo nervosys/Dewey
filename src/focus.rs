@@ -38,8 +38,7 @@ impl FocusManager {
     pub fn rebuild(&mut self, ids: Vec<String>) {
         let current = self.focused_id().map(|s| s.to_string());
         self.focusable = ids;
-        self.focused = current
-            .and_then(|id| self.focusable.iter().position(|f| f == &id));
+        self.focused = current.and_then(|id| self.focusable.iter().position(|f| f == &id));
     }
 
     /// Move focus to the next widget (Tab).

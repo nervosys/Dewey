@@ -18,6 +18,7 @@ pub struct Series {
 }
 
 impl Series {
+    #[must_use]
     pub fn new(label: impl Into<String>, values: Vec<f64>, color: Color) -> Self {
         Self {
             label: label.into(),
@@ -36,6 +37,16 @@ pub enum ChartKind {
 }
 
 /// A chart widget that renders data visualizations.
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// Chart::line("Revenue")
+///     .labels(vec!["Q1".into(), "Q2".into(), "Q3".into()])
+///     .series(Series::new("2025", vec![100.0, 150.0, 200.0], Color::BLUE))
+///     .series(Series::new("2026", vec![120.0, 180.0, 250.0], Color::GREEN));
+/// ```
 pub struct Chart {
     kind: ChartKind,
     title: String,
@@ -46,6 +57,7 @@ pub struct Chart {
 
 impl Chart {
     /// Create a new line chart.
+    #[must_use]
     pub fn line(title: impl Into<String>) -> Self {
         Self {
             kind: ChartKind::Line,
@@ -57,6 +69,7 @@ impl Chart {
     }
 
     /// Create a new bar chart.
+    #[must_use]
     pub fn bar(title: impl Into<String>) -> Self {
         Self {
             kind: ChartKind::Bar,
@@ -68,6 +81,7 @@ impl Chart {
     }
 
     /// Create a new pie chart.
+    #[must_use]
     pub fn pie(title: impl Into<String>) -> Self {
         Self {
             kind: ChartKind::Pie,
@@ -104,8 +118,16 @@ impl Discoverable for Chart {
             "A data visualization chart (line, bar, or pie)",
             SemanticRole::DataVisualization,
         );
-        schema.usage_hint = Some("Chart::line(\"Title\").series(Series::new(\"s1\", vec![1.0,2.0], Color::RED))".into());
-        schema.tags = vec!["chart".into(), "graph".into(), "plot".into(), "data".into(), "visualization".into()];
+        schema.usage_hint = Some(
+            "Chart::line(\"Title\").series(Series::new(\"s1\", vec![1.0,2.0], Color::RED))".into(),
+        );
+        schema.tags = vec![
+            "chart".into(),
+            "graph".into(),
+            "plot".into(),
+            "data".into(),
+            "visualization".into(),
+        ];
         schema
     }
 
@@ -127,7 +149,11 @@ impl Discoverable for Chart {
             AgentAction::with_params(
                 "remove_series",
                 "Remove a series by index",
-                vec![ActionParam::required("index", "Series index", ActionParamType::Index)],
+                vec![ActionParam::required(
+                    "index",
+                    "Series index",
+                    ActionParamType::Index,
+                )],
                 true,
             ),
             AgentAction::simple("clear", "Remove all series", true),
@@ -166,10 +192,7 @@ impl Discoverable for Chart {
     ) -> Result<serde_json::Value, String> {
         match action {
             "add_series" => {
-                let label = params["label"]
-                    .as_str()
-                    .ok_or("missing label")?
-                    .to_string();
+                let label = params["label"].as_str().ok_or("missing label")?.to_string();
                 let values: Vec<f64> = params["values"]
                     .as_array()
                     .ok_or("missing values array")?
@@ -181,9 +204,7 @@ impl Discoverable for Chart {
                 Ok(serde_json::json!({ "series_count": self.series.len() }))
             }
             "remove_series" => {
-                let idx = params["index"]
-                    .as_u64()
-                    .ok_or("missing index")? as usize;
+                let idx = params["index"].as_u64().ok_or("missing index")? as usize;
                 if idx >= self.series.len() {
                     return Err(format!("index {idx} out of range ({})", self.series.len()));
                 }
@@ -337,7 +358,12 @@ impl Chart {
         };
 
         // Draw X labels
-        let max_points = self.series.iter().map(|s| s.values.len()).max().unwrap_or(0);
+        let max_points = self
+            .series
+            .iter()
+            .map(|s| s.values.len())
+            .max()
+            .unwrap_or(0);
         if max_points > 1 {
             for (i, label) in self.labels.iter().enumerate().take(max_points) {
                 let x = area.x + (i as f64 / (max_points - 1) as f64) as f32 * area.width;
@@ -361,32 +387,21 @@ impl Chart {
             }
 
             for i in 0..n - 1 {
-                let x1 =
-                    area.x + (i as f64 / (n - 1) as f64) as f32 * area.width;
-                let x2 =
-                    area.x + ((i + 1) as f64 / (n - 1) as f64) as f32 * area.width;
-                let y1 = area.bottom()
-                    - ((s.values[i] - min_val) / range) as f32 * area.height;
-                let y2 = area.bottom()
-                    - ((s.values[i + 1] - min_val) / range) as f32 * area.height;
+                let x1 = area.x + (i as f64 / (n - 1) as f64) as f32 * area.width;
+                let x2 = area.x + ((i + 1) as f64 / (n - 1) as f64) as f32 * area.width;
+                let y1 = area.bottom() - ((s.values[i] - min_val) / range) as f32 * area.height;
+                let y2 = area.bottom() - ((s.values[i + 1] - min_val) / range) as f32 * area.height;
 
-                frame.painter().line(
-                    Position::new(x1, y1),
-                    Position::new(x2, y2),
-                    color,
-                    2.0,
-                );
+                frame
+                    .painter()
+                    .line(Position::new(x1, y1), Position::new(x2, y2), color, 2.0);
             }
 
             // Data points
             for i in 0..n {
-                let x =
-                    area.x + (i as f64 / (n - 1) as f64) as f32 * area.width;
-                let y = area.bottom()
-                    - ((s.values[i] - min_val) / range) as f32 * area.height;
-                frame
-                    .painter()
-                    .fill_circle(Position::new(x, y), 3.0, color);
+                let x = area.x + (i as f64 / (n - 1) as f64) as f32 * area.width;
+                let y = area.bottom() - ((s.values[i] - min_val) / range) as f32 * area.height;
+                frame.painter().fill_circle(Position::new(x, y), 3.0, color);
             }
         }
     }
@@ -418,7 +433,12 @@ impl Chart {
             max_val - min_val
         };
 
-        let max_points = self.series.iter().map(|s| s.values.len()).max().unwrap_or(0);
+        let max_points = self
+            .series
+            .iter()
+            .map(|s| s.values.len())
+            .max()
+            .unwrap_or(0);
         if max_points == 0 {
             return;
         }
@@ -506,12 +526,7 @@ impl Chart {
                 );
 
                 // Draw as lines from center to arc (approximated)
-                frame.painter().line(
-                    Position::new(cx, cy),
-                    p1,
-                    color,
-                    2.0,
-                );
+                frame.painter().line(Position::new(cx, cy), p1, color, 2.0);
                 frame.painter().line(p1, p2, color, 2.0);
             }
 
@@ -551,10 +566,6 @@ impl Chart {
                 }
             }
         }
-        if min > max {
-            (0.0, 1.0)
-        } else {
-            (min, max)
-        }
+        if min > max { (0.0, 1.0) } else { (min, max) }
     }
 }

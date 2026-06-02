@@ -1,7 +1,6 @@
 //! Progress bar widget.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -10,21 +9,44 @@ use crate::widget::Widget;
 pub struct ProgressBar {
     progress: f32,
     label: Option<String>,
+    style: Style,
     agent_id: String,
 }
 
 impl ProgressBar {
     /// Create a progress bar. `progress` is clamped to `[0.0, 1.0]`.
+    #[must_use]
     pub fn new(progress: f32) -> Self {
         Self {
             progress: progress.clamp(0.0, 1.0),
             label: None,
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
 
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
         self
     }
 
@@ -36,7 +58,11 @@ impl ProgressBar {
 
 impl Discoverable for ProgressBar {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("ProgressBar", "A progress indicator", SemanticRole::Progress);
+        let mut schema = WidgetSchema::new(
+            "ProgressBar",
+            "A progress indicator",
+            SemanticRole::Progress,
+        );
         schema.usage_hint = Some("ProgressBar::new(0.75).label(\"Loading...\")".into());
         schema.tags = vec!["progress".into(), "loading".into(), "bar".into()];
         schema
@@ -58,12 +84,20 @@ impl Discoverable for ProgressBar {
         serde_json::json!({ "progress": self.progress })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("ProgressBar has no actions".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -82,16 +116,22 @@ impl Widget for ProgressBar {
         }
 
         // Background track
-        frame.painter().fill_rect(area, Color::DARK_GRAY, 4.0);
+        let track_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
+        let radius = self.style.border_radius.unwrap_or(4.0);
+        frame.painter().fill_rect(area, track_bg, radius);
         // Filled portion
+        let fill_color = self.style.foreground.unwrap_or(Color::BLUE);
         let fill_w = area.width * self.progress;
         if fill_w > 0.0 {
             let fill = Rect::new(area.x, area.y, fill_w, area.height);
-            frame.painter().fill_rect(fill, Color::BLUE, 4.0);
+            frame.painter().fill_rect(fill, fill_color, radius);
         }
         // Label
         if let Some(label) = &self.label {
-            let ts = TextStyle { font_size: 12.0, color: Color::WHITE, ..Default::default() };
+            let mut ts = self.style.resolved_text();
+            if ts.font_size == 14.0 {
+                ts.font_size = 12.0; // Default smaller for progress labels
+            }
             let text_size = frame.painter().measure_text(label, &ts);
             let tx = area.x + (area.width - text_size.width) * 0.5;
             let ty = area.y + (area.height - text_size.height) * 0.5;

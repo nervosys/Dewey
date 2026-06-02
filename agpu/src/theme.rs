@@ -324,7 +324,11 @@ mod tests {
     #[test]
     fn theme_manager_add_and_find() {
         let mut tm = ThemeManager::new();
-        tm.add(Theme::custom("Solarized", ThemeMode::Light, Palette::light()));
+        tm.add(Theme::custom(
+            "Solarized",
+            ThemeMode::Light,
+            Palette::light(),
+        ));
         assert_eq!(tm.list().len(), 3);
         assert!(tm.find("Solarized").is_some());
     }

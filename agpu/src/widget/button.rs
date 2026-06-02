@@ -13,45 +13,89 @@ pub struct Button {
     pub label: String,
     pub disabled: bool,
     pub icon: Option<String>,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Button {
+    #[must_use]
     pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
             disabled: false,
             icon: None,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
     }
 
+    #[must_use]
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
     }
 
+    #[must_use]
     pub fn icon(mut self, icon: impl Into<String>) -> Self {
         self.icon = Some(icon.into());
+        self
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
         self
     }
 }
 
 impl Widget for Button {
     fn draw(&self, painter: &mut dyn Painter, area: Rect) {
-        let bg = if self.disabled {
+        let bg = self.bg_color.unwrap_or(if self.disabled {
             Color::rgba(0.3, 0.3, 0.3, 1.0)
         } else {
             Color::rgba(0.2, 0.4, 0.8, 1.0)
-        };
-        let fg = if self.disabled {
+        });
+        let fg = self.fg_color.unwrap_or(if self.disabled {
             Color::rgba(0.6, 0.6, 0.6, 1.0)
         } else {
             Color::WHITE
-        };
+        });
+        let radius = self.corner_radius.unwrap_or(4.0);
 
-        painter.fill_rect(area, bg, 4.0);
+        painter.fill_rect(area, bg, radius);
         let style = TextStyle {
-            font_size: 14.0,
+            font_size: self.font_size.unwrap_or(14.0),
             color: fg,
             ..TextStyle::default()
         };

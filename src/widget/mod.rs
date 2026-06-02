@@ -43,22 +43,22 @@ pub use command_palette::{CommandPalette, CommandPaletteState, PaletteCommand};
 pub use container::Container;
 pub use date_picker::{DatePicker, DatePickerState, DateValue};
 pub use image::{Image, ImageFit, ImageSource};
-pub use input::TextInput;
+pub use input::{TextInput, TextInputState};
 pub use label::Label;
-pub use list::List;
+pub use list::{List, ListState};
 pub use menu::{Menu, MenuItem};
 pub use modal::Modal;
 pub use panel::Panel;
 pub use progress::ProgressBar;
 pub use radio::Radio;
 pub use rich_text::{RichText, TextSpan};
-pub use scroll::ScrollArea;
-pub use select::Select;
-pub use slider::Slider;
+pub use scroll::{ScrollArea, ScrollState};
+pub use select::{Select, SelectState};
+pub use slider::{Slider, SliderState};
 pub use splitter::{SplitDirection, Splitter, SplitterState};
 pub use table::{SortDirection, Table, TableState};
-pub use tabs::Tabs;
-pub use text_area::TextArea;
+pub use tabs::{TabState, Tabs};
+pub use text_area::{TextArea, TextAreaState};
 pub use toolbar::{Toolbar, ToolbarItem};
 pub use tooltip::Tooltip;
 pub use tree::{Tree, TreeNode};
@@ -69,23 +69,56 @@ use crate::ontology::Discoverable;
 
 /// The core widget trait. All widgets must implement this.
 ///
-/// Widgets are consumed during rendering (moved into the frame).
+/// Widgets follow the Elm architecture: they are created fresh each frame
+/// with the current model data, rendered into a [`Rect`] area via a
+/// [`Frame`](crate::runtime::Frame), and then dropped. Widgets are
+/// **consumed** during rendering (moved into the frame).
+///
+/// Use this trait for widgets that carry no mutable state between frames—
+/// e.g. labels, buttons, tooltips, and progress bars.
+///
+/// # Implementing
+///
+/// ```ignore
+/// impl Widget for MyWidget {
+///     fn render(self, area: Rect, frame: &mut Frame<'_>) {
+///         frame.painter().fill_rect(area, self.style.background.unwrap_or(Color::TRANSPARENT));
+///         frame.painter().draw_text(area, &self.text, self.style.text.as_ref());
+///     }
+/// }
+/// ```
 pub trait Widget: Discoverable {
     /// Render this widget into the given area.
     ///
-    /// The `frame` provides access to the Painter and hit map registration.
+    /// The `frame` provides access to the [`Painter`](crate::paint::Painter)
+    /// for drawing primitives and the hit map for registering interactive regions.
     fn render(self, area: Rect, frame: &mut crate::runtime::Frame<'_>);
 }
 
 /// A stateful widget that separates persistent state from rendering.
 ///
-/// This is the recommended pattern for interactive widgets:
-/// the state lives in a `State` struct that persists across frames,
-/// while the widget itself is rebuilt each frame.
+/// Use this trait when a widget needs to maintain data across frames—
+/// scroll offsets, text cursors, selected indices, open/close flags, etc.
+/// The state lives in a `State` struct stored in the model, while the
+/// widget itself is rebuilt each frame just like a regular [`Widget`].
+///
+/// # Implementing
+///
+/// ```ignore
+/// impl StatefulWidget for MyEditor {
+///     type State = EditorState;
+///
+///     fn render(self, area: Rect, frame: &mut Frame<'_>, state: &mut EditorState) {
+///         // Read and mutate state as needed
+///         state.last_area = area;
+///         frame.painter().draw_text(area, &state.text, None);
+///     }
+/// }
+/// ```
 pub trait StatefulWidget: Discoverable {
     /// The state type for this widget.
     type State;
 
-    /// Render this stateful widget.
+    /// Render this stateful widget, reading and writing its mutable state.
     fn render(self, area: Rect, frame: &mut crate::runtime::Frame<'_>, state: &mut Self::State);
 }

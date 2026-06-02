@@ -125,10 +125,7 @@ mod tests {
 
     #[test]
     fn tree_draw_does_not_panic() {
-        let tree = TreeView::new(
-            "tree_1",
-            tree::TreeNode::new("root", "Root"),
-        );
+        let tree = TreeView::new("tree_1", tree::TreeNode::new("root", "Root"));
         let mut painter = crate::paint::NullPainter;
         tree.draw(&mut painter, Rect::new(0.0, 0.0, 200.0, 200.0));
     }

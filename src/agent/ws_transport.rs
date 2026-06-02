@@ -8,8 +8,8 @@ use std::io;
 use std::net::TcpListener;
 use std::time::Instant;
 
-use tungstenite::accept;
 use tungstenite::Message;
+use tungstenite::accept;
 
 use super::protocol::{AgentRequest, AgentResponse, RequestEnvelope};
 use super::session::AgentSession;
@@ -78,9 +78,8 @@ impl<M: Model> WsTransport<M> {
         let (stream, peer) = listener.accept()?;
         log::info!("WsTransport accepted connection from {peer}");
 
-        let mut websocket = accept(stream).map_err(|e| {
-            io::Error::new(io::ErrorKind::ConnectionAborted, e.to_string())
-        })?;
+        let mut websocket = accept(stream)
+            .map_err(|e| io::Error::new(io::ErrorKind::ConnectionAborted, e.to_string()))?;
 
         let mut window_start = Instant::now();
         let mut request_count: u32 = 0;

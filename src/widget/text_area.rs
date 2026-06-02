@@ -1,12 +1,12 @@
 //! Text area widget — multi-line text editor.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// Multi-line text editor state.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextAreaState {
     pub text: String,
     pub cursor_row: usize,
@@ -14,6 +14,7 @@ pub struct TextAreaState {
 }
 
 impl TextAreaState {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             text: String::new(),
@@ -37,19 +38,42 @@ impl Default for TextAreaState {
 /// A multi-line text editor.
 pub struct TextArea {
     placeholder: String,
+    style: Style,
     agent_id: String,
 }
 
 impl TextArea {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             placeholder: String::new(),
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
 
     pub fn placeholder(mut self, text: impl Into<String>) -> Self {
         self.placeholder = text.into();
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
         self
     }
 
@@ -67,17 +91,29 @@ impl Default for TextArea {
 
 impl Discoverable for TextArea {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("TextArea", "A multi-line text editor", SemanticRole::Input);
+        let mut schema =
+            WidgetSchema::new("TextArea", "A multi-line text editor", SemanticRole::Input);
         schema.usage_hint = Some("TextArea::new().placeholder(\"Type here...\")".into());
-        schema.tags = vec!["textarea".into(), "editor".into(), "multiline".into(), "text".into()];
+        schema.tags = vec![
+            "textarea".into(),
+            "editor".into(),
+            "multiline".into(),
+            "text".into(),
+        ];
         schema
     }
 
     fn capabilities(&self) -> Vec<AgentCapability> {
         vec![
-            AgentCapability::TextInput { multiline: true, max_length: None },
+            AgentCapability::TextInput {
+                multiline: true,
+                max_length: None,
+            },
             AgentCapability::Focusable,
-            AgentCapability::Scrollable { vertical: true, horizontal: false },
+            AgentCapability::Scrollable {
+                vertical: true,
+                horizontal: false,
+            },
         ]
     }
 
@@ -86,13 +122,21 @@ impl Discoverable for TextArea {
             AgentAction::with_params(
                 "set_text",
                 "Set the entire text content",
-                vec![ActionParam::required("text", "Text content", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "text",
+                    "Text content",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "insert",
                 "Insert text at the cursor",
-                vec![ActionParam::required("text", "Text to insert", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "text",
+                    "Text to insert",
+                    ActionParamType::String,
+                )],
                 true,
             ),
         ]
@@ -106,16 +150,28 @@ impl Discoverable for TextArea {
         serde_json::json!({ "placeholder": self.placeholder })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Use StatefulWidget for state mutations".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
-        if self.placeholder.is_empty() { None } else { Some(self.placeholder.clone()) }
+        if self.placeholder.is_empty() {
+            None
+        } else {
+            Some(self.placeholder.clone())
+        }
     }
 }
 
@@ -133,18 +189,27 @@ impl StatefulWidget for TextArea {
             frame.register_hitbox(&self.agent_id, area, 1);
         }
 
-        frame.painter().stroke_rect(area, Color::GRAY, 1.0, 2.0);
+        let border_radius = self.style.border_radius.unwrap_or(2.0);
+        frame
+            .painter()
+            .stroke_rect(area, Color::GRAY, 1.0, border_radius);
         frame.painter().push_clip(area);
-        let ts = TextStyle { font_size: 14.0, color: Color::WHITE, ..Default::default() };
+        let ts = self.style.resolved_text();
         if state.text.is_empty() {
             let mut pts = ts.clone();
             pts.color = Color::GRAY;
-            frame.painter().text(Position::new(area.x + 4.0, area.y + 4.0), &self.placeholder, &pts);
+            frame.painter().text(
+                Position::new(area.x + 4.0, area.y + 4.0),
+                &self.placeholder,
+                &pts,
+            );
         } else {
             let line_h = ts.line_height.unwrap_or(ts.font_size * 1.4);
             for (i, line) in state.text.lines().enumerate() {
                 let y = area.y + 4.0 + i as f32 * line_h;
-                frame.painter().text(Position::new(area.x + 4.0, y), line, &ts);
+                frame
+                    .painter()
+                    .text(Position::new(area.x + 4.0, y), line, &ts);
             }
         }
         frame.painter().pop_clip();

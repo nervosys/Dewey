@@ -29,10 +29,10 @@ impl Model for App {
         let area = frame.area;
 
         // Layout: counter label on top, buttons below
-        let chunks = Layout::new(Direction::Vertical, [
-            Constraint::Length(40.0),
-            Constraint::Length(40.0),
-        ])
+        let chunks = Layout::new(
+            Direction::Vertical,
+            [Constraint::Length(40.0), Constraint::Length(40.0)],
+        )
         .split(area);
 
         // Counter display
@@ -41,11 +41,14 @@ impl Model for App {
             .render(chunks[0], frame);
 
         // Buttons in a horizontal row
-        let btn_chunks = Layout::new(Direction::Horizontal, [
-            Constraint::Percentage(33.3),
-            Constraint::Percentage(33.3),
-            Constraint::Percentage(33.3),
-        ])
+        let btn_chunks = Layout::new(
+            Direction::Horizontal,
+            [
+                Constraint::Percentage(33.3),
+                Constraint::Percentage(33.3),
+                Constraint::Percentage(33.3),
+            ],
+        )
         .split(chunks[1]);
 
         Button::new("- Decrement")

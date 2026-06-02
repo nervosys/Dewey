@@ -11,7 +11,7 @@
 ### Core Architecture
 
 - **Elm Architecture** — Immutable model, message-driven updates, pure view functions
-- **30 Widgets** — Button, Label, Input, TextArea, Table, Tree, Menu, Modal, Canvas, ColorPicker, Toolbar, Splitter, CommandPalette, VirtualList, Chart, DatePicker, RichText, and more
+- **29 Widgets** — Button, Label, Input, TextArea, Table, Tree, Menu, Modal, Canvas, ColorPicker, Toolbar, Splitter, CommandPalette, VirtualList, Chart, DatePicker, RichText, and more
 - **Backend-Agnostic Rendering** — Abstract `Painter` trait with pluggable backends (egui/wgpu, web/wasm32, software rasterizer, test/headless)
 - **Full Semantic Ontology** — Every widget exposes its schema, capabilities, actions, and semantic role
 - **Layout Engine** — Constraint-based layout with flex distribution

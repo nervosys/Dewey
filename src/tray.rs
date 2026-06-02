@@ -146,7 +146,12 @@ impl Discoverable for NullTrayBackend {
             SemanticRole::Configuration,
         );
         schema.usage_hint = Some("tray.show(&TrayConfig::new(\"tooltip\"))".into());
-        schema.tags = vec!["tray".into(), "system".into(), "notification".into(), "icon".into()];
+        schema.tags = vec![
+            "tray".into(),
+            "system".into(),
+            "notification".into(),
+            "icon".into(),
+        ];
         schema
     }
 
@@ -159,13 +164,21 @@ impl Discoverable for NullTrayBackend {
             AgentAction::with_params(
                 "show",
                 "Show the system tray icon",
-                vec![ActionParam::required("tooltip", "Tooltip text", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "tooltip",
+                    "Tooltip text",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "set_tooltip",
                 "Update the tray tooltip",
-                vec![ActionParam::required("tooltip", "Tooltip text", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "tooltip",
+                    "Tooltip text",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::simple("hide", "Hide the tray icon", true),

@@ -1,6 +1,6 @@
 //! Date/time picker widget — a calendar-style date selector.
 
-use crate::core::style::{Color, FontWeight, TextStyle};
+use crate::core::style::{Color, FontWeight, Style, TextStyle};
 use crate::core::{Position, Rect};
 use crate::ontology::*;
 use crate::runtime::Frame;
@@ -15,6 +15,7 @@ pub struct DateValue {
 }
 
 impl DateValue {
+    #[must_use]
     pub fn new(year: i32, month: u32, day: u32) -> Self {
         Self { year, month, day }
     }
@@ -98,6 +99,7 @@ pub struct DatePickerState {
 }
 
 impl DatePickerState {
+    #[must_use]
     pub fn new(year: i32, month: u32, day: u32) -> Self {
         Self {
             selected: DateValue::new(year, month, day),
@@ -146,6 +148,7 @@ impl Default for DatePickerState {
 
 /// A date picker widget showing a calendar grid.
 pub struct DatePicker {
+    style: Style,
     agent_id: String,
     label: String,
 }
@@ -153,6 +156,7 @@ pub struct DatePicker {
 impl DatePicker {
     pub fn new() -> Self {
         Self {
+            style: Style::default(),
             agent_id: String::new(),
             label: "Select date".to_string(),
         }
@@ -160,6 +164,21 @@ impl DatePicker {
 
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = label.into();
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
         self
     }
 
@@ -331,11 +350,7 @@ impl StatefulWidget for DatePicker {
     type State = DatePickerState;
 
     fn render(self, area: Rect, frame: &mut Frame<'_>, state: &mut DatePickerState) {
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let ts = self.style.resolved_text();
 
         if !self.agent_id.is_empty() {
             let node = UiNode::new("DatePicker", SemanticRole::Input)
@@ -343,23 +358,30 @@ impl StatefulWidget for DatePicker {
                 .with_bounds(area.into())
                 .with_property("selected", serde_json::json!(state.selected.to_iso()))
                 .with_property("open", serde_json::json!(state.open))
-                .with_property("view_month", serde_json::json!(format!(
-                    "{} {}",
-                    DateValue::new(state.view_year, state.view_month, 1).month_name(),
-                    state.view_year
-                )));
+                .with_property(
+                    "view_month",
+                    serde_json::json!(format!(
+                        "{} {}",
+                        DateValue::new(state.view_year, state.view_month, 1).month_name(),
+                        state.view_year
+                    )),
+                );
             frame.register_widget(node);
             frame.register_hitbox(&self.agent_id, area, 1);
         }
 
         // Date display row
         let display_text = format!("{}: {}", self.label, state.selected.to_iso());
-        frame
-            .painter()
-            .fill_rect(Rect::new(area.x, area.y, area.width, 28.0), Color::DARK_GRAY, 4.0);
-        frame
-            .painter()
-            .text(Position::new(area.x + 8.0, area.y + 6.0), &display_text, &ts);
+        frame.painter().fill_rect(
+            Rect::new(area.x, area.y, area.width, 28.0),
+            Color::DARK_GRAY,
+            4.0,
+        );
+        frame.painter().text(
+            Position::new(area.x + 8.0, area.y + 6.0),
+            &display_text,
+            &ts,
+        );
 
         if !state.open {
             return;
@@ -384,9 +406,11 @@ impl StatefulWidget for DatePicker {
             Color::rgba(0.15, 0.15, 0.2, 1.0),
             0.0,
         );
-        frame
-            .painter()
-            .text(Position::new(area.x + 8.0, cal_y + 4.0), &header, &header_ts);
+        frame.painter().text(
+            Position::new(area.x + 8.0, cal_y + 4.0),
+            &header,
+            &header_ts,
+        );
 
         // Day-of-week headers
         let dow_y = cal_y + cell_h;

@@ -1,7 +1,6 @@
 //! Modal widget — a dialog overlay with background dimming.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::Widget;
@@ -10,9 +9,21 @@ use crate::widget::Widget;
 ///
 /// When `open` is `true`, a semi-transparent backdrop is drawn over the
 /// application and a centered window renders the title and body content.
+///
+/// # Examples
+///
+/// ```
+/// # use dewey::prelude::*;
+/// Modal::new("Confirm Delete", true)
+///     .body("Are you sure you want to delete this item?")
+///     .bg(Color::DARK_GRAY)
+///     .fg(Color::WHITE)
+///     .rounded(12.0);
+/// ```
 pub struct Modal {
     title: String,
     open: bool,
+    style: Style,
     agent_id: String,
     /// Content lines to show inside the modal body.
     body: Vec<String>,
@@ -21,14 +32,36 @@ pub struct Modal {
 }
 
 impl Modal {
+    #[must_use]
     pub fn new(title: impl Into<String>, open: bool) -> Self {
         Self {
             title: title.into(),
             open,
+            style: Style::default(),
             agent_id: String::new(),
             body: Vec::new(),
             width: 0.0,
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
+    }
+
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.style.border_radius = Some(radius);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -144,18 +177,21 @@ impl Widget for Modal {
         let modal_rect = Rect::new(mx, my, modal_w, modal_h);
 
         // Window
-        frame.painter().fill_rect(modal_rect, Color::DARK_GRAY, 8.0);
+        let modal_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
+        let modal_radius = self.style.border_radius.unwrap_or(8.0);
         frame
             .painter()
-            .stroke_rect(modal_rect, Color::GRAY, 1.0, 8.0);
+            .fill_rect(modal_rect, modal_bg, modal_radius);
+        frame
+            .painter()
+            .stroke_rect(modal_rect, Color::GRAY, 1.0, modal_radius);
 
         // Title
-        let title_ts = TextStyle {
-            font_size: 18.0,
-            color: Color::WHITE,
-            weight: crate::core::style::FontWeight::Bold,
-            ..Default::default()
-        };
+        let mut title_ts = self.style.resolved_text();
+        if title_ts.font_size == 14.0 {
+            title_ts.font_size = 18.0;
+        }
+        title_ts.weight = crate::core::style::FontWeight::Bold;
         frame
             .painter()
             .text(Position::new(mx + 12.0, my + 12.0), &self.title, &title_ts);
@@ -169,11 +205,7 @@ impl Widget for Modal {
         );
 
         // Body
-        let body_ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let body_ts = self.style.resolved_text();
         for (i, line) in self.body.iter().enumerate() {
             let y = my + 44.0 + i as f32 * 20.0;
             frame

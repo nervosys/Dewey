@@ -62,6 +62,11 @@ name = "chat"
 path = "examples/chat.rs"
 
 [[example]]
+name = "llm_chat"
+path = "examples/llm_chat.rs"
+required-features = ["agpu-backend"]
+
+[[example]]
 name = "counter_agpu"
 path = "examples/counter_agpu.rs"
 required-features = ["agpu-backend"]

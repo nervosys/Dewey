@@ -1,7 +1,6 @@
 //! Splitter widget — a resizable split pane.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
@@ -14,16 +13,24 @@ pub enum SplitDirection {
 }
 
 /// Persistent state for a splitter.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SplitterState {
     /// The split ratio (0.0 to 1.0). 0.5 means equal halves.
     pub ratio: f32,
 }
 
 impl SplitterState {
+    #[must_use]
     pub fn new(ratio: f32) -> Self {
         Self {
             ratio: ratio.clamp(0.0, 1.0),
         }
+    }
+}
+
+impl Default for SplitterState {
+    fn default() -> Self {
+        Self { ratio: 0.5 }
     }
 }
 
@@ -34,15 +41,18 @@ pub struct Splitter {
     direction: SplitDirection,
     min_ratio: f32,
     max_ratio: f32,
+    style: Style,
     agent_id: String,
 }
 
 impl Splitter {
+    #[must_use]
     pub fn new(direction: SplitDirection) -> Self {
         Self {
             direction,
             min_ratio: 0.1,
             max_ratio: 0.9,
+            style: Style::default(),
             agent_id: String::new(),
         }
     }
@@ -62,6 +72,21 @@ impl Splitter {
 
     pub fn max_ratio(mut self, max: f32) -> Self {
         self.max_ratio = max.clamp(0.0, 1.0);
+        self
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
         self
     }
 
@@ -192,12 +217,9 @@ impl StatefulWidget for Splitter {
         let (first, second) = Self::compute_rects(area, self.direction, state.ratio);
 
         // First panel
-        frame.painter().fill_rect(first, Color::DARK_GRAY, 0.0);
-        let ts = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
-            ..Default::default()
-        };
+        let panel_bg = self.style.background.unwrap_or(Color::DARK_GRAY);
+        frame.painter().fill_rect(first, panel_bg, 0.0);
+        let ts = self.style.resolved_text();
         frame
             .painter()
             .text(Position::new(first.x + 4.0, first.y + 4.0), "Panel A", &ts);
@@ -223,7 +245,7 @@ impl StatefulWidget for Splitter {
         }
 
         // Second panel
-        frame.painter().fill_rect(second, Color::DARK_GRAY, 0.0);
+        frame.painter().fill_rect(second, panel_bg, 0.0);
         frame.painter().text(
             Position::new(second.x + 4.0, second.y + 4.0),
             "Panel B",

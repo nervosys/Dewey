@@ -1,7 +1,7 @@
 //! Table widget — a data grid with columns, sorting, filtering, and pagination.
 
 use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
@@ -14,6 +14,7 @@ pub enum SortDirection {
 }
 
 /// Table state with selection, scroll offset, sorting, filtering, and pagination.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TableState {
     pub selected_row: Option<usize>,
     pub offset: usize,
@@ -28,6 +29,7 @@ pub struct TableState {
 }
 
 impl TableState {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             selected_row: None,
@@ -100,16 +102,34 @@ impl Default for TableState {
 pub struct Table {
     headers: Vec<String>,
     rows: Vec<Vec<String>>,
+    style: Style,
     agent_id: String,
 }
 
 impl Table {
+    #[must_use]
     pub fn new(headers: Vec<String>, rows: Vec<Vec<String>>) -> Self {
         Self {
             headers,
             rows,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -157,7 +177,11 @@ impl Table {
 
 impl Discoverable for Table {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("Table", "A data table with rows and columns", SemanticRole::DataVisualization);
+        let mut schema = WidgetSchema::new(
+            "Table",
+            "A data table with rows and columns",
+            SemanticRole::DataVisualization,
+        );
         schema.usage_hint = Some("Table::new(headers, rows).page_size(20)".into());
         schema.tags = vec!["table".into(), "data".into(), "grid".into(), "rows".into()];
         schema
@@ -165,9 +189,17 @@ impl Discoverable for Table {
 
     fn capabilities(&self) -> Vec<AgentCapability> {
         vec![
-            AgentCapability::Selectable { multi_select: false, item_count: self.rows.len() },
-            AgentCapability::Scrollable { vertical: true, horizontal: true },
-            AgentCapability::Sortable { columns: self.headers.clone() },
+            AgentCapability::Selectable {
+                multi_select: false,
+                item_count: self.rows.len(),
+            },
+            AgentCapability::Scrollable {
+                vertical: true,
+                horizontal: true,
+            },
+            AgentCapability::Sortable {
+                columns: self.headers.clone(),
+            },
             AgentCapability::Filterable,
         ]
     }
@@ -177,7 +209,11 @@ impl Discoverable for Table {
             AgentAction::with_params(
                 "select_row",
                 "Select a row by index",
-                vec![ActionParam::required("index", "Row index", ActionParamType::Index)],
+                vec![ActionParam::required(
+                    "index",
+                    "Row index",
+                    ActionParamType::Index,
+                )],
                 true,
             ),
             AgentAction::with_params(
@@ -192,13 +228,21 @@ impl Discoverable for Table {
             AgentAction::with_params(
                 "filter",
                 "Filter rows by text",
-                vec![ActionParam::required("text", "Filter text", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "text",
+                    "Filter text",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "page",
                 "Go to page",
-                vec![ActionParam::required("page", "Page number (0-based)", ActionParamType::Index)],
+                vec![ActionParam::required(
+                    "page",
+                    "Page number (0-based)",
+                    ActionParamType::Index,
+                )],
                 true,
             ),
         ]
@@ -215,16 +259,28 @@ impl Discoverable for Table {
         })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Use StatefulWidget for state mutations".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
-        Some(format!("Table ({} columns, {} rows)", self.headers.len(), self.rows.len()))
+        Some(format!(
+            "Table ({} columns, {} rows)",
+            self.headers.len(),
+            self.rows.len()
+        ))
     }
 }
 
@@ -256,15 +312,21 @@ impl StatefulWidget for Table {
                 .with_property("row_count", serde_json::json!(self.rows.len()))
                 .with_property("visible_count", serde_json::json!(total_visible))
                 .with_property("selected_row", serde_json::json!(state.selected_row))
-                .with_property("sort_column", serde_json::json!(state.sort_column.map(|(c, d)| {
-                    serde_json::json!({"column": c, "direction": match d {
-                        SortDirection::Ascending => "asc",
-                        SortDirection::Descending => "desc",
-                    }})
-                })))
+                .with_property(
+                    "sort_column",
+                    serde_json::json!(state.sort_column.map(|(c, d)| {
+                        serde_json::json!({"column": c, "direction": match d {
+                            SortDirection::Ascending => "asc",
+                            SortDirection::Descending => "desc",
+                        }})
+                    })),
+                )
                 .with_property("filter", serde_json::json!(state.filter))
                 .with_property("page", serde_json::json!(state.current_page))
-                .with_property("total_pages", serde_json::json!(state.total_pages(total_visible)));
+                .with_property(
+                    "total_pages",
+                    serde_json::json!(state.total_pages(total_visible)),
+                );
             frame.register_widget(node);
             frame.register_hitbox(&self.agent_id, area, 1);
         }
@@ -273,34 +335,49 @@ impl StatefulWidget for Table {
         let col_count = self.headers.len().max(1);
         let col_w = area.width / col_count as f32;
         let row_h = 24.0;
-        let header_ts = TextStyle { font_size: 14.0, color: Color::WHITE, weight: crate::core::style::FontWeight::Bold, ..Default::default() };
-        let cell_ts = TextStyle { font_size: 14.0, color: Color::WHITE, ..Default::default() };
+        let mut header_ts = self.style.resolved_text();
+        header_ts.weight = crate::core::style::FontWeight::Bold;
+        let cell_ts = self.style.resolved_text();
 
         // Headers with sort indicator
         for (j, header) in self.headers.iter().enumerate() {
             let x = area.x + j as f32 * col_w;
-            frame.painter().fill_rect(Rect::new(x, area.y, col_w, row_h), Color::DARK_GRAY, 0.0);
+            frame
+                .painter()
+                .fill_rect(Rect::new(x, area.y, col_w, row_h), Color::DARK_GRAY, 0.0);
             let indicator = match state.sort_column {
                 Some((col, SortDirection::Ascending)) if col == j => " ▲",
                 Some((col, SortDirection::Descending)) if col == j => " ▼",
                 _ => "",
             };
             let label = format!("{header}{indicator}");
-            frame.painter().text(Position::new(x + 4.0, area.y + 4.0), &label, &header_ts);
+            frame
+                .painter()
+                .text(Position::new(x + 4.0, area.y + 4.0), &label, &header_ts);
         }
 
         // Rows
         for (display_i, &row_idx) in page_rows.iter().enumerate() {
             let y = area.y + (display_i + 1) as f32 * row_h;
             if state.selected_row == Some(row_idx) {
-                frame.painter().fill_rect(Rect::new(area.x, y, area.width, row_h), Color::BLUE.with_alpha(0.3), 0.0);
+                frame.painter().fill_rect(
+                    Rect::new(area.x, y, area.width, row_h),
+                    Color::BLUE.with_alpha(0.3),
+                    0.0,
+                );
             } else if display_i % 2 == 1 {
-                frame.painter().fill_rect(Rect::new(area.x, y, area.width, row_h), Color::WHITE.with_alpha(0.05), 0.0);
+                frame.painter().fill_rect(
+                    Rect::new(area.x, y, area.width, row_h),
+                    Color::WHITE.with_alpha(0.05),
+                    0.0,
+                );
             }
             if let Some(row) = self.rows.get(row_idx) {
                 for (j, cell) in row.iter().enumerate() {
                     let x = area.x + j as f32 * col_w;
-                    frame.painter().text(Position::new(x + 4.0, y + 4.0), cell, &cell_ts);
+                    frame
+                        .painter()
+                        .text(Position::new(x + 4.0, y + 4.0), cell, &cell_ts);
                 }
             }
         }
@@ -309,14 +386,22 @@ impl StatefulWidget for Table {
         if state.page_size > 0 {
             let total_pages = state.total_pages(total_visible);
             let footer_y = area.y + (page_rows.len() + 1) as f32 * row_h;
-            let footer_ts = TextStyle { font_size: 12.0, color: Color::LIGHT_GRAY, ..Default::default() };
+            let footer_ts = TextStyle {
+                font_size: 12.0,
+                color: Color::LIGHT_GRAY,
+                ..Default::default()
+            };
             let footer_text = format!(
                 "Page {} of {} ({} rows)",
                 state.current_page + 1,
                 total_pages,
                 total_visible,
             );
-            frame.painter().text(Position::new(area.x + 4.0, footer_y + 4.0), &footer_text, &footer_ts);
+            frame.painter().text(
+                Position::new(area.x + 4.0, footer_y + 4.0),
+                &footer_text,
+                &footer_ts,
+            );
         }
 
         frame.painter().pop_clip();

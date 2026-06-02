@@ -118,12 +118,7 @@ impl<M: Model + 'static> RunningApp<M> {
         // Create a temporary instance to create the surface,
         // then let GpuContext handle backend selection with fallback.
         let preference = options.backend;
-        let backends = match preference {
-            BackendPreference::VulkanPreferred => wgpu::Backends::VULKAN,
-            BackendPreference::OpenGLPreferred => wgpu::Backends::GL,
-            BackendPreference::PlatformDefault => wgpu::Backends::PRIMARY,
-            BackendPreference::Specific(b) => b,
-        };
+        let backends = preference.to_backends();
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
             ..Default::default()
@@ -138,7 +133,7 @@ impl<M: Model + 'static> RunningApp<M> {
         let format = surface_caps
             .formats
             .iter()
-            .find(|f| f.is_srgb())
+            .find(|f| !f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
 
@@ -156,7 +151,7 @@ impl<M: Model + 'static> RunningApp<M> {
             present_mode,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 2,
+            desired_maximum_frame_latency: 3,
         };
         surface.configure(gpu.device(), &surface_config);
 

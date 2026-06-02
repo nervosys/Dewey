@@ -40,8 +40,7 @@ impl MessageCatalog {
 
     /// Load messages from a JSON string: `{ "key": "value", ... }`.
     pub fn from_json(json: &str) -> Result<Self, String> {
-        let map: HashMap<String, String> =
-            serde_json::from_str(json).map_err(|e| e.to_string())?;
+        let map: HashMap<String, String> = serde_json::from_str(json).map_err(|e| e.to_string())?;
         Ok(Self { messages: map })
     }
 }
@@ -129,7 +128,12 @@ impl Discoverable for I18n {
             SemanticRole::System,
         );
         schema.usage_hint = Some("i18n.t(\"hello\") or i18n.t_fmt(\"greet\", &[\"world\"])".into());
-        schema.tags = vec!["i18n".into(), "locale".into(), "translation".into(), "language".into()];
+        schema.tags = vec![
+            "i18n".into(),
+            "locale".into(),
+            "translation".into(),
+            "language".into(),
+        ];
         schema
     }
 
@@ -142,13 +146,21 @@ impl Discoverable for I18n {
             AgentAction::with_params(
                 "set_locale",
                 "Switch the active locale",
-                vec![ActionParam::required("locale", "Locale identifier (e.g. en, es, ja)", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "locale",
+                    "Locale identifier (e.g. en, es, ja)",
+                    ActionParamType::String,
+                )],
                 true,
             ),
             AgentAction::with_params(
                 "translate",
                 "Look up a translation key",
-                vec![ActionParam::required("key", "Message key", ActionParamType::String)],
+                vec![ActionParam::required(
+                    "key",
+                    "Message key",
+                    ActionParamType::String,
+                )],
                 false,
             ),
             AgentAction::simple("list_locales", "List all available locales", false),
@@ -187,9 +199,7 @@ impl Discoverable for I18n {
                 let result = self.t(key).to_string();
                 Ok(serde_json::json!({ "key": key, "translation": result }))
             }
-            "list_locales" => {
-                Ok(serde_json::json!({ "locales": self.locales() }))
-            }
+            "list_locales" => Ok(serde_json::json!({ "locales": self.locales() })),
             _ => Err(format!("Unknown action: {action}")),
         }
     }

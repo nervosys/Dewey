@@ -251,10 +251,7 @@ mod tests {
         let grid = GridLayout::new(3, 2)
             .item(GridItem::new(0).col_span(2))
             .item(GridItem::new(1));
-        let children = vec![
-            DesiredSize::new(50.0, 30.0),
-            DesiredSize::new(50.0, 30.0),
-        ];
+        let children = vec![DesiredSize::new(50.0, 30.0), DesiredSize::new(50.0, 30.0)];
         let area = Rect::new(0.0, 0.0, 300.0, 200.0);
         let rects = grid.arrange(&children, area);
         // First item spans 2 columns: width should be ~200
@@ -265,8 +262,8 @@ mod tests {
 
     #[test]
     fn constraint_layout_min_max() {
-        let layout = ConstraintLayout::new()
-            .rule(ConstraintRule::new(0).width(MinMax::new(50.0, 200.0)));
+        let layout =
+            ConstraintLayout::new().rule(ConstraintRule::new(0).width(MinMax::new(50.0, 200.0)));
         let children = vec![DesiredSize::new(300.0, 40.0)];
         let area = Rect::new(0.0, 0.0, 400.0, 400.0);
         let rects = layout.arrange(&children, area);
@@ -334,8 +331,7 @@ mod tests {
 
     #[test]
     fn responsive_measure_uses_widest() {
-        let layout = ResponsiveLayout::new()
-            .breakpoint(Breakpoint::new(0.0, FlexLayout::column()));
+        let layout = ResponsiveLayout::new().breakpoint(Breakpoint::new(0.0, FlexLayout::column()));
         let children = vec![DesiredSize::new(50.0, 30.0)];
         let size = layout.measure(&children, SizeConstraints::unconstrained());
         assert!((size.width - 50.0).abs() < 0.01);

@@ -1,18 +1,19 @@
 //! List widget — a vertical list of selectable items.
 
-use crate::core::style::TextStyle;
-use crate::core::{Color, Position, Rect};
+use crate::core::{Color, Position, Rect, Style};
 use crate::ontology::*;
 use crate::runtime::Frame;
 use crate::widget::StatefulWidget;
 
 /// List state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ListState {
     pub selected: Option<usize>,
     pub offset: usize,
 }
 
 impl ListState {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             selected: None,
@@ -40,24 +41,36 @@ impl ListState {
     }
 }
 
-impl Default for ListState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// A vertical list of items.
 pub struct List {
     items: Vec<String>,
+    style: Style,
     agent_id: String,
 }
 
 impl List {
+    #[must_use]
     pub fn new(items: Vec<String>) -> Self {
         Self {
             items,
+            style: Style::default(),
             agent_id: String::new(),
         }
+    }
+
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn bg(mut self, color: Color) -> Self {
+        self.style.background = Some(color);
+        self
+    }
+
+    pub fn fg(mut self, color: Color) -> Self {
+        self.style.foreground = Some(color);
+        self
     }
 
     pub fn agent_id(mut self, id: impl Into<String>) -> Self {
@@ -68,7 +81,11 @@ impl List {
 
 impl Discoverable for List {
     fn schema(&self) -> WidgetSchema {
-        let mut schema = WidgetSchema::new("List", "A vertical list of selectable items", SemanticRole::Selection);
+        let mut schema = WidgetSchema::new(
+            "List",
+            "A vertical list of selectable items",
+            SemanticRole::Selection,
+        );
         schema.usage_hint = Some("List::new(vec![\"Item 1\".into(), \"Item 2\".into()])".into());
         schema.tags = vec!["list".into(), "items".into(), "selection".into()];
         schema
@@ -76,8 +93,14 @@ impl Discoverable for List {
 
     fn capabilities(&self) -> Vec<AgentCapability> {
         vec![
-            AgentCapability::Selectable { multi_select: false, item_count: self.items.len() },
-            AgentCapability::Scrollable { vertical: true, horizontal: false },
+            AgentCapability::Selectable {
+                multi_select: false,
+                item_count: self.items.len(),
+            },
+            AgentCapability::Scrollable {
+                vertical: true,
+                horizontal: false,
+            },
             AgentCapability::Focusable,
         ]
     }
@@ -86,7 +109,11 @@ impl Discoverable for List {
         vec![AgentAction::with_params(
             "select",
             "Select an item by index",
-            vec![ActionParam::required("index", "The index to select", ActionParamType::Index)],
+            vec![ActionParam::required(
+                "index",
+                "The index to select",
+                ActionParamType::Index,
+            )],
             true,
         )]
     }
@@ -99,12 +126,20 @@ impl Discoverable for List {
         serde_json::json!({ "items": self.items, "count": self.items.len() })
     }
 
-    fn execute_action(&mut self, _action: &str, _params: &serde_json::Value) -> Result<serde_json::Value, String> {
+    fn execute_action(
+        &mut self,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         Err("Use StatefulWidget for state mutations".to_string())
     }
 
     fn agent_id(&self) -> Option<&str> {
-        if self.agent_id.is_empty() { None } else { Some(&self.agent_id) }
+        if self.agent_id.is_empty() {
+            None
+        } else {
+            Some(&self.agent_id)
+        }
     }
 
     fn accessibility_label(&self) -> Option<String> {
@@ -128,14 +163,18 @@ impl StatefulWidget for List {
 
         frame.painter().push_clip(area);
         let item_h = 24.0;
-        let ts = TextStyle { font_size: 14.0, color: Color::WHITE, ..Default::default() };
+        let ts = self.style.resolved_text();
         for (i, item) in self.items.iter().enumerate() {
             let y = area.y + i as f32 * item_h;
             let row = Rect::new(area.x, y, area.width, item_h);
             if state.selected == Some(i) {
-                frame.painter().fill_rect(row, Color::BLUE.with_alpha(0.3), 0.0);
+                frame
+                    .painter()
+                    .fill_rect(row, Color::BLUE.with_alpha(0.3), 0.0);
             }
-            frame.painter().text(Position::new(area.x + 4.0, y + 4.0), item, &ts);
+            frame
+                .painter()
+                .text(Position::new(area.x + 4.0, y + 4.0), item, &ts);
         }
         frame.painter().pop_clip();
     }

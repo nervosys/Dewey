@@ -12,15 +12,56 @@ pub struct Checkbox {
     pub id: String,
     pub label: String,
     pub checked: bool,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    corner_radius: Option<f32>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Checkbox {
+    #[must_use]
     pub fn new(id: impl Into<String>, label: impl Into<String>, checked: bool) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
             checked,
+            bg_color: None,
+            fg_color: None,
+            corner_radius: None,
+            font_size: None,
+            is_bold: false,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn rounded(mut self, radius: f32) -> Self {
+        self.corner_radius = Some(radius);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
     }
 }
 
@@ -34,7 +75,9 @@ impl Widget for Checkbox {
             box_size,
         );
 
-        painter.stroke_rect(box_rect, Color::rgba(0.5, 0.5, 0.6, 1.0), 1.0, 2.0);
+        let border = self.fg_color.unwrap_or(Color::rgba(0.5, 0.5, 0.6, 1.0));
+        let radius = self.corner_radius.unwrap_or(2.0);
+        painter.stroke_rect(box_rect, border, 1.0, radius);
 
         if self.checked {
             let inner = Rect::new(
@@ -43,12 +86,14 @@ impl Widget for Checkbox {
                 box_size - 6.0,
                 box_size - 6.0,
             );
-            painter.fill_rect(inner, Color::rgba(0.2, 0.6, 1.0, 1.0), 1.0);
+            let check_color = self.bg_color.unwrap_or(Color::rgba(0.2, 0.6, 1.0, 1.0));
+            painter.fill_rect(inner, check_color, 1.0);
         }
 
+        let text_color = self.fg_color.unwrap_or(Color::WHITE);
         let style = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(14.0),
+            color: text_color,
             ..TextStyle::default()
         };
         painter.text(
@@ -116,15 +161,48 @@ pub struct Radio {
     pub id: String,
     pub label: String,
     pub selected: bool,
+    bg_color: Option<Color>,
+    fg_color: Option<Color>,
+    font_size: Option<f32>,
+    is_bold: bool,
 }
 
 impl Radio {
+    #[must_use]
     pub fn new(id: impl Into<String>, label: impl Into<String>, selected: bool) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
             selected,
+            bg_color: None,
+            fg_color: None,
+            font_size: None,
+            is_bold: false,
         }
+    }
+
+    #[must_use]
+    pub fn bg(mut self, color: Color) -> Self {
+        self.bg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn fg(mut self, color: Color) -> Self {
+        self.fg_color = Some(color);
+        self
+    }
+
+    #[must_use]
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.font_size = Some(size);
+        self
+    }
+
+    #[must_use]
+    pub fn bold(mut self) -> Self {
+        self.is_bold = true;
+        self
     }
 }
 
@@ -133,15 +211,18 @@ impl Widget for Radio {
         let radius = 8.0;
         let center = Position::new(area.x + radius, area.y + area.height * 0.5);
 
-        painter.stroke_circle(center, radius, Color::rgba(0.5, 0.5, 0.6, 1.0), 1.0);
+        let border = self.fg_color.unwrap_or(Color::rgba(0.5, 0.5, 0.6, 1.0));
+        painter.stroke_circle(center, radius, border, 1.0);
 
         if self.selected {
-            painter.fill_circle(center, radius - 3.0, Color::rgba(0.2, 0.6, 1.0, 1.0));
+            let fill = self.bg_color.unwrap_or(Color::rgba(0.2, 0.6, 1.0, 1.0));
+            painter.fill_circle(center, radius - 3.0, fill);
         }
 
+        let text_color = self.fg_color.unwrap_or(Color::WHITE);
         let style = TextStyle {
-            font_size: 14.0,
-            color: Color::WHITE,
+            font_size: self.font_size.unwrap_or(14.0),
+            color: text_color,
             ..TextStyle::default()
         };
         painter.text(
