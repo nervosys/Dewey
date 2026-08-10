@@ -67,32 +67,35 @@ impl<M: Model> HeadlessDriver<M> {
         // Render to build the UI tree before processing tree-dependent requests
         self.render();
 
-        let (response, should_quit) = self.session.process_request(request, &self.ontology);
+        let (mut response, should_quit) = self.session.process_request(request, &self.ontology);
 
-        // Handle execute_action by dispatching through the model
+        // Handle execute_action by dispatching through the model.
         if let AgentRequest::ExecuteAction {
             agent_id,
             action,
             params,
         } = request
         {
-            let cmd = Command::AgentAction {
-                agent_id: agent_id.clone(),
-                action: action.clone(),
-                params: params.clone(),
-            };
-            self.process_command(cmd);
+            // The model's result replaces the session's generic acknowledgement.
+            // Otherwise an agent gets "ok" back from a search and has no way to
+            // read what was found.
+            let result = self.model.execute_action(agent_id, action, params);
+            if !result.is_null() {
+                response.data = Some(result);
+            }
         }
 
-        // Handle batch actions
+        // Handle batch actions.
         if let AgentRequest::BatchActions { actions } = request {
-            for entry in actions {
-                let cmd = Command::AgentAction {
-                    agent_id: entry.agent_id.clone(),
-                    action: entry.action.clone(),
-                    params: entry.params.clone(),
-                };
-                self.process_command(cmd);
+            let results: Vec<serde_json::Value> = actions
+                .iter()
+                .map(|entry| {
+                    self.model
+                        .execute_action(&entry.agent_id, &entry.action, &entry.params)
+                })
+                .collect();
+            if results.iter().any(|value| !value.is_null()) {
+                response.data = Some(serde_json::Value::Array(results));
             }
         }
 

@@ -53,6 +53,91 @@ pub trait Painter {
 
     /// Pop the most recent clipping rectangle.
     fn pop_clip(&mut self);
+
+    /// Fill a closed polygon.
+    ///
+    /// Rectangles and circles cover most of a user interface, but not vector
+    /// artwork: a chart's plot area, a map, or a page of a PDF is made of
+    /// arbitrary paths with their curves already flattened to points. Backends
+    /// that can fill a polygon should; the default approximates with the
+    /// bounding box, which keeps something visible rather than nothing on
+    /// backends that cannot.
+    fn fill_path(&mut self, points: &[Position], color: Color) {
+        let Some(bounds) = bounding_box(points) else {
+            return;
+        };
+        self.fill_rect(bounds, color, 0.0);
+    }
+
+    /// Stroke a polyline through `points`.
+    ///
+    /// The default walks the points as line segments, which every backend can
+    /// already do, so this is only worth overriding where a backend has a
+    /// native path primitive that joins segments better at the corners.
+    fn stroke_path(&mut self, points: &[Position], color: Color, width: f32) {
+        for pair in points.windows(2) {
+            self.line(pair[0], pair[1], color, width);
+        }
+    }
+
+    /// Draw an RGBA image, scaled to fill `rect`.
+    ///
+    /// The default draws a placeholder outline. That is honest — a backend
+    /// without texture support genuinely cannot show the pixels — but it means
+    /// any backend used to render documents needs a real implementation, since
+    /// a scanned page *is* the image.
+    fn draw_image(&mut self, rect: Rect, _image: &ImageData<'_>) {
+        self.stroke_rect(rect, Color::GRAY, 1.0, 0.0);
+    }
+}
+
+/// Borrowed 8-bit RGBA pixels, row-major from the top left.
+///
+/// Borrowed rather than owned so a caller can hand over a decoded frame, a
+/// memory-mapped asset or a slice of a larger atlas without copying it first.
+#[derive(Debug, Clone, Copy)]
+pub struct ImageData<'a> {
+    pub width: u32,
+    pub height: u32,
+    /// `width * height * 4` bytes. A shorter slice is treated as transparent
+    /// past its end rather than as an error, so a truncated decode degrades to
+    /// a partial image instead of failing a frame.
+    pub pixels: &'a [u8],
+}
+
+impl<'a> ImageData<'a> {
+    pub fn new(width: u32, height: u32, pixels: &'a [u8]) -> ImageData<'a> {
+        ImageData {
+            width,
+            height,
+            pixels,
+        }
+    }
+
+    /// The pixel at `(x, y)`, or transparent black if it is out of range.
+    pub fn pixel(&self, x: u32, y: u32) -> [u8; 4] {
+        if x >= self.width || y >= self.height {
+            return [0, 0, 0, 0];
+        }
+        let at = ((y as usize * self.width as usize) + x as usize) * 4;
+        match self.pixels.get(at..at + 4) {
+            Some(px) => [px[0], px[1], px[2], px[3]],
+            None => [0, 0, 0, 0],
+        }
+    }
+}
+
+/// The axis-aligned bounds of a point set.
+pub fn bounding_box(points: &[Position]) -> Option<Rect> {
+    let first = points.first()?;
+    let (mut min_x, mut min_y, mut max_x, mut max_y) = (first.x, first.y, first.x, first.y);
+    for point in points {
+        min_x = min_x.min(point.x);
+        min_y = min_y.min(point.y);
+        max_x = max_x.max(point.x);
+        max_y = max_y.max(point.y);
+    }
+    Some(Rect::new(min_x, min_y, max_x - min_x, max_y - min_y))
 }
 
 /// A no-op painter that discards all operations.

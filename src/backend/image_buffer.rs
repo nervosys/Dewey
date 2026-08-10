@@ -5,7 +5,7 @@
 
 use crate::core::style::TextStyle;
 use crate::core::{Color, Position, Rect, Size};
-use crate::paint::Painter;
+use crate::paint::{ImageData, Painter};
 
 /// An in-memory RGBA painter that rasterizes into a pixel buffer.
 pub struct ImagePainter {
@@ -223,11 +223,151 @@ impl Painter for ImagePainter {
     fn pop_clip(&mut self) {
         self.clip_stack.pop();
     }
+
+    fn fill_path(&mut self, points: &[Position], color: Color) {
+        // Even-odd scanline fill. Concave and self-intersecting paths are both
+        // handled, which is the point of doing it properly here: this backend
+        // is what headless tests and server-side rendering compare against, so
+        // it should be the most correct implementation rather than the least.
+        if points.len() < 3 {
+            return;
+        }
+        let Some(bounds) = crate::paint::bounding_box(points) else {
+            return;
+        };
+
+        let top = bounds.y.floor().max(0.0) as i32;
+        let bottom = (bounds.y + bounds.height).ceil().min(self.height as f32) as i32;
+        let mut crossings: Vec<f32> = Vec::with_capacity(points.len());
+
+        for y in top..bottom {
+            // Sample through the middle of the row, so a horizontal edge lying
+            // exactly on an integer boundary neither doubles nor vanishes.
+            let scan = y as f32 + 0.5;
+            crossings.clear();
+
+            for index in 0..points.len() {
+                let a = points[index];
+                let b = points[(index + 1) % points.len()];
+                // Half-open in y: counting both endpoints would register a
+                // shared vertex twice and invert the fill after it.
+                if (a.y <= scan) != (b.y <= scan) {
+                    let t = (scan - a.y) / (b.y - a.y);
+                    crossings.push(a.x + t * (b.x - a.x));
+                }
+            }
+            crossings.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+            for pair in crossings.chunks_exact(2) {
+                let (start, end) = (pair[0].ceil() as i32, pair[1].floor() as i32);
+                for x in start..=end {
+                    self.set_pixel(x, y, color);
+                }
+            }
+        }
+    }
+
+    fn draw_image(&mut self, rect: Rect, image: &ImageData<'_>) {
+        if image.width == 0 || image.height == 0 || rect.width <= 0.0 || rect.height <= 0.0 {
+            return;
+        }
+        let left = rect.x.floor().max(0.0) as i32;
+        let top = rect.y.floor().max(0.0) as i32;
+        let right = (rect.x + rect.width).ceil().min(self.width as f32) as i32;
+        let bottom = (rect.y + rect.height).ceil().min(self.height as f32) as i32;
+
+        // Nearest-neighbour: this buffer exists for correctness checks and
+        // screenshots, where a predictable sample beats a smoothed one.
+        for y in top..bottom {
+            let v = (y as f32 - rect.y) / rect.height;
+            let source_y = ((v * image.height as f32) as u32).min(image.height - 1);
+            for x in left..right {
+                let u = (x as f32 - rect.x) / rect.width;
+                let source_x = ((u * image.width as f32) as u32).min(image.width - 1);
+
+                let [r, g, b, a] = image.pixel(source_x, source_y);
+                if a == 0 {
+                    continue;
+                }
+                self.set_pixel(x, y, Color::rgba(
+                    r as f32 / 255.0,
+                    g as f32 / 255.0,
+                    b as f32 / 255.0,
+                    a as f32 / 255.0,
+                ));
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fill_path_fills_a_concave_shape_correctly() {
+        // An L: the notch must stay empty. A bounding-box approximation fills
+        // it, so this is the test that says the scanline fill is real.
+        let mut p = ImagePainter::new(40, 40);
+        let l_shape = [
+            Position::new(5.0, 5.0),
+            Position::new(15.0, 5.0),
+            Position::new(15.0, 25.0),
+            Position::new(35.0, 25.0),
+            Position::new(35.0, 35.0),
+            Position::new(5.0, 35.0),
+        ];
+        p.fill_path(&l_shape, Color::RED);
+
+        assert!(p.get_pixel(10, 10).r > 0.9, "the upper arm should be filled");
+        assert!(p.get_pixel(30, 30).r > 0.9, "the lower arm should be filled");
+        assert!(
+            p.get_pixel(30, 10).a < 0.01,
+            "the notch must stay empty — a bounding-box fill would cover it"
+        );
+    }
+
+    #[test]
+    fn fill_path_ignores_degenerate_input() {
+        let mut p = ImagePainter::new(10, 10);
+        p.fill_path(&[], Color::RED);
+        p.fill_path(
+            &[Position::new(1.0, 1.0), Position::new(2.0, 2.0)],
+            Color::RED,
+        );
+        assert!(p.get_pixel(1, 1).a < 0.01);
+    }
+
+    #[test]
+    fn draw_image_scales_pixels_into_the_target_rect() {
+        // A 2x2 image with one red quadrant, scaled 10x. The red has to land
+        // in the right corner, which is what catches a flipped or transposed
+        // sample.
+        let pixels: Vec<u8> = vec![
+            255, 0, 0, 255, // top-left red
+            0, 0, 255, 255, // top-right blue
+            0, 0, 255, 255, // bottom-left blue
+            0, 0, 255, 255, // bottom-right blue
+        ];
+        let image = ImageData::new(2, 2, &pixels);
+
+        let mut p = ImagePainter::new(20, 20);
+        p.draw_image(Rect::new(0.0, 0.0, 20.0, 20.0), &image);
+
+        assert!(p.get_pixel(5, 5).r > 0.9, "top-left should be red");
+        assert!(p.get_pixel(15, 5).b > 0.9, "top-right should be blue");
+        assert!(p.get_pixel(5, 15).b > 0.9, "bottom-left should be blue");
+    }
+
+    #[test]
+    fn draw_image_tolerates_a_short_pixel_slice() {
+        // A truncated decode must degrade, not panic.
+        let pixels = [255u8, 0, 0, 255];
+        let image = ImageData::new(4, 4, &pixels);
+        let mut p = ImagePainter::new(10, 10);
+        p.draw_image(Rect::new(0.0, 0.0, 10.0, 10.0), &image);
+        assert!(p.get_pixel(0, 0).r > 0.9);
+    }
 
     #[test]
     fn clear_and_read() {

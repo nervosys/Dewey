@@ -5,7 +5,7 @@
 
 use crate::core::style::TextStyle;
 use crate::core::{Color, Position, Rect, Size};
-use crate::paint::Painter;
+use crate::paint::{ImageData, Painter};
 
 // ---------------------------------------------------------------------------
 // EguiPainter — implements the Painter trait via egui's drawing API
@@ -109,6 +109,86 @@ impl Painter for EguiPainter {
             self.painter.set_clip_rect(clip);
         }
     }
+
+    fn fill_path(&mut self, points: &[Position], color: Color) {
+        // egui's convex-polygon primitive is the only filled-path shape it
+        // offers. A concave path renders as its convex interpretation rather
+        // than being dropped — wrong in detail but visible and in the right
+        // place. A proper tessellator is the eventual fix and belongs here.
+        if points.len() < 3 {
+            return;
+        }
+        let shape = egui::epaint::PathShape::convex_polygon(
+            points.iter().map(|p| egui::pos2(p.x, p.y)).collect(),
+            to_egui_color(color),
+            egui::Stroke::NONE,
+        );
+        self.painter.add(shape);
+    }
+
+    fn stroke_path(&mut self, points: &[Position], color: Color, width: f32) {
+        if points.len() < 2 {
+            return;
+        }
+        // One line shape rather than n segments, so egui mitres the joins
+        // instead of leaving a notch at every corner.
+        let shape = egui::epaint::PathShape::line(
+            points.iter().map(|p| egui::pos2(p.x, p.y)).collect(),
+            egui::Stroke::new(width, to_egui_color(color)),
+        );
+        self.painter.add(shape);
+    }
+
+    fn draw_image(&mut self, rect: Rect, image: &ImageData<'_>) {
+        if image.width == 0 || image.height == 0 {
+            return;
+        }
+        let size = [image.width as usize, image.height as usize];
+
+        // egui wants exactly width * height * 4 bytes and panics inside
+        // `from_rgba_unmultiplied` on a short slice, so pad rather than trust.
+        let needed = size[0] * size[1] * 4;
+        let pixels = if image.pixels.len() >= needed {
+            std::borrow::Cow::Borrowed(&image.pixels[..needed])
+        } else {
+            let mut padded = image.pixels.to_vec();
+            padded.resize(needed, 0);
+            std::borrow::Cow::Owned(padded)
+        };
+
+        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &pixels);
+        // Keyed by content, so an image redrawn every frame uploads once
+        // instead of allocating a fresh texture handle each time.
+        let key = format!("dewey_img_{:016x}", content_key(&pixels, image.width));
+        let handle =
+            self.painter
+                .ctx()
+                .load_texture(key, color_image, egui::TextureOptions::LINEAR);
+        self.painter.image(
+            handle.id(),
+            to_egui_rect(rect),
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
+    }
+}
+
+/// A cheap content key for texture reuse: FNV-1a over a sample of the pixels.
+///
+/// Hashing every byte of a large scan on every frame would cost more than the
+/// upload it saves, so this samples — enough to tell apart the images a
+/// document actually contains, not a cryptographic digest.
+fn content_key(pixels: &[u8], width: u32) -> u64 {
+    const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0000_0100_0000_01B3;
+
+    let mut hash = OFFSET ^ u64::from(width);
+    let step = (pixels.len() / 1024).max(1);
+    for byte in pixels.iter().step_by(step) {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash ^ pixels.len() as u64
 }
 
 // ---------------------------------------------------------------------------
