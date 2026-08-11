@@ -133,6 +133,30 @@ pub trait Model: Sized {
     /// Called when the agent ontology is exported. Override to customize.
     fn register_ontology(&self, _registry: &mut OntologyRegistry) {}
 
+    /// Perform an agent-requested action and return its result.
+    ///
+    /// The ontology lets an agent *discover* an application; this is what lets
+    /// it *act on* one. Without it, `execute_action` reaches only behaviour
+    /// expressible as an injected click — which limits an agent to what a mouse
+    /// can reach and leaves an application's real operations (open this file,
+    /// search for that, export) unreachable.
+    ///
+    /// The returned value is sent back to the agent. The default returns null,
+    /// meaning "this application defines no actions", so existing
+    /// implementations are unaffected.
+    ///
+    /// Implementations should route to the same code the user interface calls.
+    /// An action that exists only for agents is a second implementation waiting
+    /// to disagree with the first.
+    fn execute_action(
+        &mut self,
+        _agent_id: &str,
+        _action: &str,
+        _params: &serde_json::Value,
+    ) -> serde_json::Value {
+        serde_json::Value::Null
+    }
+
     /// Application title (used as window title).
     fn title(&self) -> &str {
         "Dewey App"
